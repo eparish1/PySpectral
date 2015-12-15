@@ -109,3 +109,5 @@ while t <= et:
  
 t1 = time.time()
 print('time = ' + str(t1 - t0))
+Dissipation = 1./dt*(Energy[1::] - Energy[0:-1])
+numpy.savez('3DSolution/stats',Energy=Energy,Dissipation=Dissipation,t=linspace(0,t+dt,size(Energy)))
