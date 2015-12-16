@@ -11,11 +11,11 @@ def unpad(uhat_pad,arrange):
   N3 = int( np.shape(uhat_pad)[2]*2./3. + 1 )
   uhat = np.zeros((N1,N2,N3),dtype = 'complex')
   ## Remove padding from the middle of the 3D cube
-  uhat[0:N1/2,0:N2/2,0:N3-1] = uhat_pad[0:N1/2               ,0:N2/2               ,0:N3-1              ] #left     lower back (0,0,0)
-  uhat[0:N1/2,N2/2+1::,0:N3-1] = uhat_pad[0:N1/2               ,int(3./2.*N2)-N2/2+1:: ,0:N3-1              ] #l    eft upper back (0,1,0)
+  uhat[0:N1/2   , 0:N2/2   , 0:N3-1] = uhat_pad[0:N1/2                 ,0:N2/2                  ,0:N3-1 ] #left lower back (0,0,0)
+  uhat[0:N1/2   , N2/2+1:: , 0:N3-1] = uhat_pad[0:N1/2                 ,int(3./2.*N2)-N2/2+1::  ,0:N3-1 ] #left upper back (0,1,0)
 
-  uhat[N1/2+1::,0:N2/2,0:N3-1] = uhat_pad[int(3./2.*N1)-N1/2+1:: ,0:N2/2               ,0:N3-1              ] #r    ight lower back (1,0,0)
-  uhat[N1/2+1::,N2/2+1::,0:N3-1] = uhat_pad[int(3./2.*N1)-N1/2+1:: ,int(3./2.*N2)-N2/2+1::  ,0:N3-1                  ] #right upper back (1,1,0)
+  uhat[N1/2+1:: , 0:N2/2   , 0:N3-1] = uhat_pad[int(3./2.*N1)-N1/2+1:: ,0:N2/2                  ,0:N3-1 ] #right lower back (1,0,0)
+  uhat[N1/2+1:: , N2/2+1:: , 0:N3-1] = uhat_pad[int(3./2.*N1)-N1/2+1:: ,int(3./2.*N2)-N2/2+1::  ,0:N3-1 ] #right upper back (1,1,0)
   return uhat
 
 
@@ -23,11 +23,11 @@ def pad(uhat,arrange):
   N1,N2,N3 = np.shape(uhat)
   ## Add padding to the middle of the 3D cube
   uhat_pad = np.zeros((int(3./2.*N1),int(3./2.*N2),N3 + (N3-1)/2 ),dtype = 'complex')
-  uhat_pad[0:N1/2               ,0:N2/2               ,0:N3-1              ] = uhat[0:N1/2,0:N2/2,0:N3-1] #left     lower back (0,0,0)
-  uhat_pad[0:N1/2               ,int(3./2.*N2)-N2/2+1:: ,0:N3-1              ] = uhat[0:N1/2,N2/2+1::,0:N3-1] #l    eft upper back (0,1,0)
+  uhat_pad[0:N1/2                 , 0:N2/2                 , 0:N3-1              ] = uhat[0:N1/2   , 0:N2/2   , 0:N3-1] #left     lower back (0,0,0)
+  uhat_pad[0:N1/2                 , int(3./2.*N2)-N2/2+1:: , 0:N3-1              ] = uhat[0:N1/2   , N2/2+1:: , 0:N3-1] #l    eft upper back (0,1,0)
 
-  uhat_pad[int(3./2.*N1)-N1/2+1:: ,0:N2/2               ,0:N3-1              ] = uhat[N1/2+1::,0:N2/2,0:N3-1] #r    ight lower back (1,0,0)
-  uhat_pad[int(3./2.*N1)-N1/2+1:: ,int(3./2.*N2)-N2/2+1:: ,0:N3-1             ] = uhat[N1/2+1::,N2/2+1::,0:N3-1]     #right upper back (1,1,0)
+  uhat_pad[int(3./2.*N1)-N1/2+1:: , 0:N2/2                 , 0:N3-1              ] = uhat[N1/2+1:: , 0:N2/2   , 0:N3-1] #r    ight lower back (1,0,0)
+  uhat_pad[int(3./2.*N1)-N1/2+1:: , int(3./2.*N2)-N2/2+1:: , 0:N3-1              ] = uhat[N1/2+1:: , N2/2+1:: , 0:N3-1]     #right upper back (1,1,0)
   return uhat_pad
 
 def Q2U(Q,uhat,vhat,what):
@@ -93,16 +93,21 @@ Q = U2Q(Q,uhat,vhat,what)
 
 iteration = 0
 Energy = np.zeros(1)
-Energy[0] = np.real( np.mean(0.5*uhat*np.conj(uhat) + 0.5*vhat*np.conj(vhat) + 0.5*what*np.conj(what)) )
-EnergyScale = np.mean( 0.5*(u*u +v*v + w*w) )/Energy[0] 
+
+uE = np.sum(uhat[:,:,1:grid.N3/2]*np.conj(uhat[:,:,1:grid.N3/2]*2) ) + np.sum(uhat[:,:,grid.N3/2]*np.conj(uhat[:,:,grid.N3/2])) + np.sum(uhat[:,:,0]*np.conj(uhat[:,:,0])) 
+vE = np.sum(vhat[:,:,1:grid.N3/2]*np.conj(vhat[:,:,1:grid.N3/2]*2) ) + np.sum(vhat[:,:,grid.N3/2]*np.conj(vhat[:,:,grid.N3/2])) + np.sum(vhat[:,:,0]*np.conj(vhat[:,:,0])) 
+wE = np.sum(what[:,:,1:grid.N3/2]*np.conj(what[:,:,1:grid.N3/2]*2) ) + np.sum(what[:,:,grid.N3/2]*np.conj(what[:,:,grid.N3/2])) + np.sum(what[:,:,0]*np.conj(what[:,:,0])) 
+Energy[0] = 0.5*(uE + vE + wE)/(N1*N2*N3)
 while t <= et:
   Q = advanceQ_RK4(dt,Q,uhat,vhat,what,grid,myFFT)
   t += dt
   if (iteration%save_freq == 0):
     savehook(uhat,vhat,what,grid,iteration)
   iteration += 1
-  Energy = np.append(Energy,EnergyScale*np.mean(0.5*uhat*np.conj(uhat) +\
-           0.5*vhat*np.conj(vhat) + 0.5*what*np.conj(what)))
+  uE = np.sum(uhat[:,:,1:grid.N3/2]*np.conj(uhat[:,:,1:grid.N3/2]*2) ) + np.sum(uhat[:,:,grid.N3/2]*np.conj(uhat[:,:,grid.N3/2])) + np.sum(uhat[:,:,0]*np.conj(uhat[:,:,0])) 
+  vE = np.sum(vhat[:,:,1:grid.N3/2]*np.conj(vhat[:,:,1:grid.N3/2]*2) ) + np.sum(vhat[:,:,grid.N3/2]*np.conj(vhat[:,:,grid.N3/2])) + np.sum(vhat[:,:,0]*np.conj(vhat[:,:,0])) 
+  wE = np.sum(what[:,:,1:grid.N3/2]*np.conj(what[:,:,1:grid.N3/2]*2) ) + np.sum(what[:,:,grid.N3/2]*np.conj(what[:,:,grid.N3/2])) + np.sum(what[:,:,0]*np.conj(what[:,:,0])) 
+  Energy = np.append(Energy,0.5*(uE + vE + wE)/(N1*N2*N3) )
   sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(t) + \
                    "   Energy = " + str(np.real(Energy[-1]))  + "\n")
   sys.stdout.flush()
@@ -110,4 +115,5 @@ while t <= et:
 t1 = time.time()
 print('time = ' + str(t1 - t0))
 Dissipation = 1./dt*(Energy[1::] - Energy[0:-1])
-numpy.savez('3DSolution/stats',Energy=Energy,Dissipation=Dissipation,t=linspace(0,t+dt,size(Energy)))
+numpy.savez('3DSolution/stats',Energy=Energy,Dissipation=Dissipation,t=np.linspace(0,t+dt,np.size(Energy)))
+
