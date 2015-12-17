@@ -18,9 +18,12 @@ class gridclass:
     self.k2,self.k1,self.k3 = np.meshgrid(k2,k1,k3)
     self.ksqr = self.k1*self.k1 + self.k2*self.k2 + self.k3*self.k3 + 1.e-50
     self.ksqr_i = 1./self.ksqr
+    self.kc = np.amax(k1)
+    self.Delta = np.pi/np.amax(np.abs(k1))
 
 class FFTclass:
   def initialize(self,N1,N2,N3,nthreads):
+    self.scale = np.sqrt( (3./2.)**3*np.sqrt(N1*N2*N3) ) #scaling for FFTS
     ## Inverse transforms of uhat,vhat,what are of the truncated padded variable. 
     ## Input is complex truncate,output is real untruncated
     self.invalT =    pyfftw.n_byte_align_empty((int(3./2.*N1),int(3./2.*N2),int(3./4.*N3+1)), 16, 'complex128')
