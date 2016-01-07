@@ -84,6 +84,8 @@ def computeRHS_MARKOVIAN(Q,uhat,vhat,what,nu,grid,myFFT):
     return RHS
 
 
+
+### RHS function for the t-model
 def computeRHS_tmodel(Q,uhat,vhat,what,nu,grid,myFFT):
     uhat,vhat,what = Q2U(Q,uhat,vhat,what)
     RHS = np.zeros((3*grid.N1,3*grid.N2,3*(grid.N3/2+1) ),dtype='complex')
