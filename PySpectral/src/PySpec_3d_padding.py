@@ -58,3 +58,5 @@ def seperateModes(uhat_pad,arrange):
   u_q[N1/2:2*N1-N1/2, N2/2:2*N2-N2/2, N3/2::] = uhat_pad[N1/2:2*N1-N1/2 ,N2/2:2*N2-N2/2 ,N3/2::] 
   u_p = uhat_pad - u_q
   return u_p,u_q
+
+## test comment
