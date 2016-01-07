@@ -13,5 +13,5 @@ class utilitiesClass():
       wE = np.sum(what[:,:,1:grid.N3/2]*np.conj(what[:,:,1:grid.N3/2]*2) ) + \
            np.sum(what[:,:,grid.N3/2]*np.conj(what[:,:,grid.N3/2])) + \
            np.sum(what[:,:,0]*np.conj(what[:,:,0]))
-      return 0.5*(uE + vE + wE)/(grid.N1*grid.N2*grid.N3)
+      return np.real(0.5*(uE + vE + wE)/(grid.N1*grid.N2*grid.N3))
 
