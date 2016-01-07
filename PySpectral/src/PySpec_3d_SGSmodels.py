@@ -1,5 +1,7 @@
 import numpy as np
 from PySpec_3d_importmodule import pad,unpad,getnut
+
+### Eddy Viscosity Based Models ###################
 def computeSGS_EV_REALDOMAIN(grid,uhat,vhat,what,myFFT):
   S11hat = 1j*grid.k1*uhat 
   S22hat = 1j*grid.k2*vhat 
@@ -32,5 +34,6 @@ def computeSGS_EV_REALDOMAIN(grid,uhat,vhat,what,myFFT):
   tau23imag = unpad( myFFT.fft_obj(tau23real)*scale_i,1)
   return tau11imag,tau22imag,tau33imag,tau12imag,tau13imag,tau23imag
 
+### Mori-Zwanzig t-model 
 
 

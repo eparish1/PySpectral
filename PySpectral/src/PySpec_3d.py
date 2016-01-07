@@ -24,6 +24,7 @@ Energy = np.zeros(1)
 
 Energy[0] = utilities.computeEnergy(uhat,vhat,what,grid)
 while t <= et:
+  grid.t = t
   Q = advanceQ_RK4(dt,Q,uhat,vhat,what,nu,grid,myFFT)
   t += dt
   if (iteration%save_freq == 0):
