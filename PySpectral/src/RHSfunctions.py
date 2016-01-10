@@ -1,5 +1,5 @@
 import numpy as np
-from PySpec_3d_padding import pad,unpad,pad_2x,unpad_2x,seperateModes
+from padding import pad,unpad,pad_2x,unpad_2x,seperateModes
 def computeRHS_NOSGS(main,grid,myFFT):
     main.Q2U()
     scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
@@ -104,7 +104,7 @@ def computeRHS_SMAG(main,grid,myFFT):
                            1j*grid.k3*phat - main.nu*grid.ksqr*main.what - 1j*grid.k1*main.tauhat[:,:,:,4] - \
                            1j*grid.k2*main.tauhat[:,:,:,5] - 1j*grid.k3*main.tauhat[:,:,:,2]
 
-#### RHS function for the t-model
+
 def computeRHS_tmodel(main,grid,myFFT):
     main.Q2U()
     ## in the t-model, do 2x padding because we want to have convolutions where 
@@ -143,8 +143,6 @@ def computeRHS_tmodel(main,grid,myFFT):
     uwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
     vwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
 
-
-
     uuhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*ureal[:,:,:])
     vvhat[:,:,:] = myFFT.fft_obj2(vreal[:,:,:]*vreal[:,:,:])
     wwhat[:,:,:] = myFFT.fft_obj2(wreal[:,:,:]*wreal[:,:,:])
@@ -167,10 +165,10 @@ def computeRHS_tmodel(main,grid,myFFT):
                                          1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
 
     PLv = -1j*grid.k1f*uvhat - 1j*grid.k2f*vvhat - 1j*grid.k3f*vwhat - \
-                                         1j*grid.k2f*phat - nu*grid.ksqrf*pad_2x(main.vhat,1)
+                                         1j*grid.k2f*phat - main.nu*grid.ksqrf*pad_2x(main.vhat,1)
 
     PLw = -1j*grid.k1f*uwhat - 1j*grid.k2f*vwhat - 1j*grid.k3f*wwhat - \
-                                         1j*grid.k3f*phat - nu*grid.ksqrf*pad_2x(main.what,1)
+                                         1j*grid.k3f*phat - main.nu*grid.ksqrf*pad_2x(main.what,1)
 
     PLu_p[:,:,:],PLu_q[:,:,:] = seperateModes(PLu,1)
     PLv_p[:,:,:],PLv_q[:,:,:] = seperateModes(PLv,1)
@@ -179,7 +177,7 @@ def computeRHS_tmodel(main,grid,myFFT):
     PLu_qreal[:,:,:] = myFFT.ifftT_obj2(PLu_q)*scale
     PLv_qreal[:,:,:] = myFFT.ifftT_obj2(PLv_q)*scale
     PLw_qreal[:,:,:] = myFFT.ifftT_obj2(PLw_q)*scale
-    
+
     up_PLuq = unpad_2x( myFFT.fft_obj2(ureal*PLu_qreal),1)
     vp_PLuq = unpad_2x( myFFT.fft_obj2(vreal*PLu_qreal),1)
     wp_PLuq = unpad_2x( myFFT.fft_obj2(wreal*PLu_qreal),1)
@@ -194,31 +192,30 @@ def computeRHS_tmodel(main,grid,myFFT):
 
     t1 = grid.k1*up_PLuq + grid.k2*vp_PLuq + grid.k3*wp_PLuq
     t2 = grid.k1*up_PLvq + grid.k2*vp_PLvq + grid.k3*wp_PLvq
-    t3 = grid.k1*up_PLwq + grid.k2*vp_PLwq + grid.k3*wp_PLwq 
+    t3 = grid.k1*up_PLwq + grid.k2*vp_PLwq + grid.k3*wp_PLwq
 
     PLQLu = -1j*grid.k1*up_PLuq - 1j*grid.k2*vp_PLuq - 1j*grid.k3*wp_PLuq - \
             1j*grid.k1*up_PLuq - 1j*grid.k1*vp_PLvq - 1j*grid.k1*wp_PLwq + \
             1j*grid.k1*grid.ksqr_i*(2.*grid.k1*(t1) ) + \
             1j*grid.k2*grid.ksqr_i*(2.*grid.k1*(t2) ) + \
-            1j*grid.k3*grid.ksqr_i*(2.*grid.k1*(t3) ) 
+            1j*grid.k3*grid.ksqr_i*(2.*grid.k1*(t3) )
 
     PLQLv = -1j*grid.k1*up_PLvq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*wp_PLvq - \
             1j*grid.k2*up_PLuq - 1j*grid.k2*vp_PLvq - 1j*grid.k2*wp_PLwq + \
             1j*grid.k1*grid.ksqr_i*(2.*grid.k2*(t1) ) + \
             1j*grid.k2*grid.ksqr_i*(2.*grid.k2*(t2) ) + \
-            1j*grid.k3*grid.ksqr_i*(2.*grid.k2*(t3) ) 
+            1j*grid.k3*grid.ksqr_i*(2.*grid.k2*(t3) )
 
     PLQLw = -1j*grid.k1*up_PLwq - 1j*grid.k2*vp_PLwq - 1j*grid.k3*wp_PLwq -\
             1j*grid.k3*up_PLuq - 1j*grid.k3*vp_PLvq - 1j*grid.k3*wp_PLwq + \
             1j*grid.k1*grid.ksqr_i*(2.*grid.k3*(t1) ) + \
             1j*grid.k2*grid.ksqr_i*(2.*grid.k3*(t2) ) + \
-            1j*grid.k3*grid.ksqr_i*(2.*grid.k3*(t3) ) 
+            1j*grid.k3*grid.ksqr_i*(2.*grid.k3*(t3) )
 
-    Q[0::3,0::3,0::3] = unpad_2x(PLu,1) + 0.1*main.t*PLQLu
+    main.Q[0::3,0::3,0::3] = unpad_2x(PLu,1) + 0.1*main.t*PLQLu
 
-    Q[1::3,1::3,1::3] = unpad_2x(PLv,1) + 0.1*main.t*PLQLv
+    main.Q[1::3,1::3,1::3] = unpad_2x(PLv,1) + 0.1*main.t*PLQLv
 
-    Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + 0.1*main.t*PLQLw
-
+    main.Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + 0.1*main.t*PLQLw
 
 

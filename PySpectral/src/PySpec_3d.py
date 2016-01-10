@@ -2,35 +2,42 @@ import numpy as np
 import os
 import pyfftw
 import time
+import sys
+from Classes import gridclass, FFTclass, variables,utilitiesClass
+from savehook import savehook
+utilities = utilitiesClass()
+myFFT = FFTclass(N1,N2,N3,nthreads)
+grid = gridclass(N1,N2,N3,x,y,z)
+main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu)
+
+
 if not os.path.exists('3DSolution'):
    os.makedirs('3DSolution')
 
-def advanceQ_RK4(dt,Q,uhat,vhat,what,nu,grid,myFFT):
-  Q0 = np.zeros(np.shape(Q),dtype='complex')
-  Q0[:,:,:] = Q
+def advanceQ_RK4(main,grid,myFFT):
+  Q0 = np.zeros(np.shape(main.Q),dtype='complex')
+  Q0[:,:,:] = main.Q[:,:,:]
   rk4const = np.array([1./4,1./3,1./2,1.])
   for i in range(0,4):
-    RHS = computeRHS(Q,uhat,vhat,what,nu,grid,myFFT)
-    Q = Q0 + dt*rk4const[i]*RHS
-  return Q
+    main.computeRHS(main,grid,myFFT)
+    main.Q[:,:,:] = Q0[:,:,:] + main.dt*rk4const[i]*main.Q[:,:,:]
 
 
 t0 = time.time()
-Q = np.zeros((3*N1,3*N2,3*(N3/2+1)),dtype='complex')
-Q = U2Q(Q,uhat,vhat,what)
+main.U2Q()
 
 iteration = 0
 Energy = np.zeros(1)
 
-Energy[0] = utilities.computeEnergy(uhat,vhat,what,grid)
+Energy[0] = utilities.computeEnergy(main.uhat,main.vhat,main.what,grid)
 while t <= et:
-  grid.t = t
-  Q = advanceQ_RK4(dt,Q,uhat,vhat,what,nu,grid,myFFT)
+  main.t = t
+  advanceQ_RK4(main,grid,myFFT)
   t += dt
   if (iteration%save_freq == 0):
-    savehook(uhat,vhat,what,grid,iteration)
+    savehook(main.uhat,main.vhat,main.what,grid,iteration)
   iteration += 1
-  Energy = np.append(Energy, utilities.computeEnergy(uhat,vhat,what,grid) )
+  Energy = np.append(Energy, utilities.computeEnergy(main.uhat,main.vhat,main.what,grid) )
   sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(t) + \
                    "   Energy = " + str(np.real(Energy[-1]))  + "\n")
   sys.stdout.flush()
@@ -38,5 +45,5 @@ while t <= et:
 t1 = time.time()
 print('time = ' + str(t1 - t0))
 Dissipation = 1./dt*(Energy[1::] - Energy[0:-1])
-numpy.savez('3DSolution/stats',Energy=Energy,Dissipation=Dissipation,t=np.linspace(0,t+dt,np.size(Energy)))
+np.savez('3DSolution/stats',Energy=Energy,Dissipation=Dissipation,t=np.linspace(0,t+dt,np.size(Energy)))
 
