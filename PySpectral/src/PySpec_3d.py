@@ -46,7 +46,8 @@ while t <= et:
     savehook(main,grid,iteration)
   iteration += 1
   Energy = np.append(Energy, utilities.computeEnergy(main.uhat,main.vhat,main.what,grid) ) #add to the energy array
-  sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(t) + \  #print out stats
+  #print out stats
+  sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(t) + \
                    "   Energy = " + str(np.real(Energy[-1]))  + "\n")
   sys.stdout.flush()
 
