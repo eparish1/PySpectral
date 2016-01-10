@@ -58,6 +58,9 @@ class variables:
     ##============ t-model ========================
     if (turb_model == 2):
       print('Using the t-model')
+      self.PLQLu = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.PLQLv = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.PLQLw = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
       self.Q = np.zeros( (3*grid.N1,3*grid.N2,3*(grid.N3/2+1)),dtype='complex')
       self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
       self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]

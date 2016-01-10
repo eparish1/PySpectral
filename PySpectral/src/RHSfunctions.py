@@ -194,28 +194,28 @@ def computeRHS_tmodel(main,grid,myFFT):
     t2 = grid.k1*up_PLvq + grid.k2*vp_PLvq + grid.k3*wp_PLvq
     t3 = grid.k1*up_PLwq + grid.k2*vp_PLwq + grid.k3*wp_PLwq
 
-    PLQLu = -1j*grid.k1*up_PLuq - 1j*grid.k2*vp_PLuq - 1j*grid.k3*wp_PLuq - \
+    main.PLQLu = -1j*grid.k1*up_PLuq - 1j*grid.k2*vp_PLuq - 1j*grid.k3*wp_PLuq - \
             1j*grid.k1*up_PLuq - 1j*grid.k1*vp_PLvq - 1j*grid.k1*wp_PLwq + \
             1j*grid.k1*grid.ksqr_i*(2.*grid.k1*(t1) ) + \
             1j*grid.k2*grid.ksqr_i*(2.*grid.k1*(t2) ) + \
             1j*grid.k3*grid.ksqr_i*(2.*grid.k1*(t3) )
 
-    PLQLv = -1j*grid.k1*up_PLvq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*wp_PLvq - \
+    main.PLQLv = -1j*grid.k1*up_PLvq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*wp_PLvq - \
             1j*grid.k2*up_PLuq - 1j*grid.k2*vp_PLvq - 1j*grid.k2*wp_PLwq + \
             1j*grid.k1*grid.ksqr_i*(2.*grid.k2*(t1) ) + \
             1j*grid.k2*grid.ksqr_i*(2.*grid.k2*(t2) ) + \
             1j*grid.k3*grid.ksqr_i*(2.*grid.k2*(t3) )
 
-    PLQLw = -1j*grid.k1*up_PLwq - 1j*grid.k2*vp_PLwq - 1j*grid.k3*wp_PLwq -\
+    main.PLQLw = -1j*grid.k1*up_PLwq - 1j*grid.k2*vp_PLwq - 1j*grid.k3*wp_PLwq -\
             1j*grid.k3*up_PLuq - 1j*grid.k3*vp_PLvq - 1j*grid.k3*wp_PLwq + \
             1j*grid.k1*grid.ksqr_i*(2.*grid.k3*(t1) ) + \
             1j*grid.k2*grid.ksqr_i*(2.*grid.k3*(t2) ) + \
             1j*grid.k3*grid.ksqr_i*(2.*grid.k3*(t3) )
 
-    main.Q[0::3,0::3,0::3] = unpad_2x(PLu,1) + 0.1*main.t*PLQLu
+    main.Q[0::3,0::3,0::3] = unpad_2x(PLu,1) + 0.1*main.t*main.PLQLu
 
-    main.Q[1::3,1::3,1::3] = unpad_2x(PLv,1) + 0.1*main.t*PLQLv
+    main.Q[1::3,1::3,1::3] = unpad_2x(PLv,1) + 0.1*main.t*main.PLQLv
 
-    main.Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + 0.1*main.t*PLQLw
+    main.Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + 0.1*main.t*main.PLQLw
 
 

@@ -4,7 +4,6 @@ import pyfftw
 import time
 import sys
 from Classes import gridclass, FFTclass, variables,utilitiesClass
-from savehook import savehook
 utilities = utilitiesClass()
 myFFT = FFTclass(N1,N2,N3,nthreads)
 grid = gridclass(N1,N2,N3,x,y,z)
