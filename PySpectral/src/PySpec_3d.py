@@ -48,7 +48,6 @@ while t <= et:
   iteration += 1
   Energy = np.append(Energy, utilities.computeEnergy(main,grid) ) #add to the energy array
   Energy_resolved = np.append(Energy_resolved, utilities.computeEnergy_resolved(main,grid) ) #add to the energy array
-  print(Energy - Energy_resolved)
   #print out stats
   sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(t) + \
                    "   Energy = " + str(np.real(Energy[-1]))  + "\n")
