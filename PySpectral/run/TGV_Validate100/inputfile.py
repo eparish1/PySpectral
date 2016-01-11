@@ -6,9 +6,10 @@ sys.path.append("../../src")
 #
 turb_model = 0
 #-------- MESH ---------------------
-N1 = 64
-N2 = 64
-N3 = 64 #this direction is halved for conjugate symmetry
+N1 = 32
+N2 = 32
+N3 = 32 #this direction is halved for conjugate symmetry
+kc = 16 #cutoff frequency
 #-------------------------------------
 
 #----- Physical Properties --------
@@ -42,6 +43,19 @@ uhat =  np.fft.rfftn(u) / np.sqrt(N1*N2*N3)
 vhat =  np.fft.rfftn(v) / np.sqrt(N1*N2*N3)
 what =  np.fft.rfftn(w) / np.sqrt(N1*N2*N3)
 #________________________________________
+#-------- Save function called at each iteration ----
+def savehook(main,grid,iteration):
+    string = '3DSolution/PVsol' + str(iteration)
+    string2 = '3DSolution/npsol' + str(iteration)
+    u = np.fft.irfftn(main.uhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+    v = np.fft.irfftn(main.vhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+    w = np.fft.irfftn(main.what)*np.sqrt(grid.N1*grid.N2*grid.N3)
+    #gridToVTK(string, grid.x,grid.y,grid.z, pointData = {"u" : np.real(u.transpose()) , \
+    #  "v" : np.real(v.transpose()), \
+    #  "w" : np.real(w.transpose())} )
+    np.savez_compressed(string2,uhat=main.uhat,vhat=main.vhat,what=main.what,t=main.t)
+#----------------------------------------------------------
+
 #------ Run Solver -----------------------
 execfile('../../src/PySpec_3d.py')
 #----------------------------------------
@@ -63,6 +77,7 @@ Dm[0] = 0
 ta = linspace(0,t,size(Energy))
 plot(tm[:],Em[0::],color='black',label='Ref 64x64')
 plot(ts,Es,color='red',label='PySpec_3d')
+plot(ts,rundata['Energy_resolved'],label='Resolved Energy')
 xlim([0,20])
 xlabel(r'$t$',**axis_font)
 ylabel(r'Energy',**axis_font)
@@ -72,6 +87,8 @@ savefig('Validate_E.pdf')
 figure(2)
 plot(tm[1::],Dm[0::],color='black',label='Ref 64x64')
 plot(ts[1::],Ds,color='red',label='PySpec 64x64')
+plot(ts[1::],-rundata['Dissipation_resolved'],label='Resolved Dissipation')
+
 legend(loc = 1)
 xlabel(r'$t$',**axis_font)
 ylabel(r'Dissipation',**axis_font)
