@@ -154,16 +154,32 @@ class utilitiesClass():
 
 
   def computeEnergy_resolved(self,main,grid):
-      uE = np.sum(main.uhat[:,:,1:grid.N3/2]*np.conj(main.uhat[:,:,1:grid.N3/2]*2) ) + \
-           np.sum(main.uhat[:,:,0]*np.conj(main.uhat[:,:,0])) 
-      vE = np.sum(main.vhat[:,:,1:grid.N3/2]*np.conj(main.vhat[:,:,1:grid.N3/2]*2) ) + \
-           np.sum(main.vhat[:,:,0]*np.conj(main.vhat[:,:,0])) 
-      wE = np.sum(main.what[:,:,1:grid.N3/2]*np.conj(main.what[:,:,1:grid.N3/2]*2) ) + \
-           np.sum(main.what[:,:,0]*np.conj(main.what[:,:,0]))
+      uE = np.sum(main.uhat[0:grid.kc,0:grid.kc,1:grid.kc]*                 np.conj(main.uhat[0:grid.kc,0:grid.kc,1:grid.kc]*2) ) + \
+           np.sum(main.uhat[0:grid.kc,0:grid.kc,0]*                         np.conj(main.uhat[0:grid.kc,0:grid.kc,0])) + \
+           np.sum(main.uhat[grid.N1-grid.kc::,grid.N2-grid.kc::,1:grid.kc]* np.conj(main.uhat[grid.N1-grid.kc::,grid.N2-grid.kc::,1:grid.kc]*2) ) + \
+           np.sum(main.uhat[grid.N1-grid.kc::,grid.N2-grid.kc::,0]*         np.conj(main.uhat[grid.N1-grid.kc::,grid.N2-grid.kc::,0])) + \
+           np.sum(main.uhat[0:grid.kc,grid.N2-grid.kc::,1:grid.kc]*         np.conj(main.uhat[0:grid.kc,grid.N2-grid.kc::,1:grid.kc]*2) ) + \
+           np.sum(main.uhat[0:grid.kc,grid.N2-grid.kc::,0]*                 np.conj(main.uhat[0:grid.kc,grid.N2-grid.kc::,0])) +\
+           np.sum(main.uhat[grid.N1-grid.kc::,0:grid.kc,1:grid.kc]*       np.conj(main.uhat[grid.N1-grid.kc::,0:grid.kc,1:grid.kc]*2) ) + \
+           np.sum(main.uhat[grid.N1-grid.kc::,0:grid.kc,0]*               np.conj(main.uhat[grid.N1-grid.kc::,0:grid.kc,0])) 
 
+      vE = np.sum(main.vhat[0:grid.kc,0:grid.kc,1:grid.kc]*                 np.conj(main.vhat[0:grid.kc,0:grid.kc,1:grid.kc]*2) ) + \
+           np.sum(main.vhat[0:grid.kc,0:grid.kc,0]*                         np.conj(main.vhat[0:grid.kc,0:grid.kc,0])) + \
+           np.sum(main.vhat[grid.N1-grid.kc::,grid.N2-grid.kc::,1:grid.kc]* np.conj(main.vhat[grid.N1-grid.kc::,grid.N2-grid.kc::,1:grid.kc]*2) ) + \
+           np.sum(main.vhat[grid.N1-grid.kc::,grid.N2-grid.kc::,0]*         np.conj(main.vhat[grid.N1-grid.kc::,grid.N2-grid.kc::,0])) + \
+           np.sum(main.vhat[0:grid.kc,grid.N2-grid.kc::,1:grid.kc]*         np.conj(main.vhat[0:grid.kc,grid.N2-grid.kc::,1:grid.kc]*2) ) + \
+           np.sum(main.vhat[0:grid.kc,grid.N2-grid.kc::,0]*                 np.conj(main.vhat[0:grid.kc,grid.N2-grid.kc::,0])) +\
+           np.sum(main.vhat[grid.N1-grid.kc::,0:grid.kc,1:grid.kc]*       np.conj(main.vhat[grid.N1-grid.kc::,0:grid.kc,1:grid.kc]*2) ) + \
+           np.sum(main.vhat[grid.N1-grid.kc::,0:grid.kc,0]*               np.conj(main.vhat[grid.N1-grid.kc::,0:grid.kc,0])) 
 
-      uE = uE -  np.sum(main.uhat[grid.kc:grid.N1-grid.kc+1,grid.kc:grid.N2-grid.kc+1,-1]*np.conj(main.uhat[grid.kc:grid.N1-grid.kc+1,grid.kc:grid.N2-grid.kc+1,-1]*2) ) 
-      vE = vE - np.sum(main.vhat[grid.kc:grid.N1-grid.kc+1,grid.kc:grid.N2-grid.kc+1,-1]*np.conj(main.vhat[grid.kc:grid.N1-grid.kc+1,grid.kc:grid.N2-grid.kc+1,-1]*2) ) 
-      wE = wE -  np.sum(main.what[grid.kc:grid.N1-grid.kc+1,grid.kc:grid.N2-grid.kc+1,-1]*np.conj(main.what[grid.kc:grid.N1-grid.kc+1,grid.kc:grid.N2-grid.kc+1,-1]*2) ) 
+      wE = np.sum(main.what[0:grid.kc,0:grid.kc,1:grid.kc]*                 np.conj(main.what[0:grid.kc,0:grid.kc,1:grid.kc]*2) ) + \
+           np.sum(main.what[0:grid.kc,0:grid.kc,0]*                         np.conj(main.what[0:grid.kc,0:grid.kc,0])) + \
+           np.sum(main.what[grid.N1-grid.kc::,grid.N2-grid.kc::,1:grid.kc]* np.conj(main.what[grid.N1-grid.kc::,grid.N2-grid.kc::,1:grid.kc]*2) ) + \
+           np.sum(main.what[grid.N1-grid.kc::,grid.N2-grid.kc::,0]*         np.conj(main.what[grid.N1-grid.kc::,grid.N2-grid.kc::,0])) + \
+           np.sum(main.what[0:grid.kc,grid.N2-grid.kc::,1:grid.kc]*         np.conj(main.what[0:grid.kc,grid.N2-grid.kc::,1:grid.kc]*2) ) + \
+           np.sum(main.what[0:grid.kc,grid.N2-grid.kc::,0]*                 np.conj(main.what[0:grid.kc,grid.N2-grid.kc::,0])) +\
+           np.sum(main.what[grid.N1-grid.kc::,0:grid.kc,1:grid.kc]*       np.conj(main.what[grid.N1-grid.kc::,0:grid.kc,1:grid.kc]*2) ) + \
+           np.sum(main.what[grid.N1-grid.kc::,0:grid.kc,0]*               np.conj(main.what[grid.N1-grid.kc::,0:grid.kc,0])) 
+
       return np.real(0.5*(uE + vE + wE)/(grid.N1*grid.N2*grid.N3))
 
