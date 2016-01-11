@@ -6,7 +6,7 @@ import sys
 from Classes import gridclass, FFTclass, variables,utilitiesClass
 utilities = utilitiesClass()
 myFFT = FFTclass(N1,N2,N3,nthreads)
-grid = gridclass(N1,N2,N3,x,y,z)
+grid = gridclass(N1,N2,N3,x,y,z,kc)
 main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu)
 
 # Make Solution Directory if it does not exist
@@ -34,7 +34,9 @@ main.U2Q() #distribute u variables to Q
 
 iteration = 0 #time step iteration
 Energy = np.zeros(1) #initialize an array for energy
-Energy[0] = utilities.computeEnergy(main.uhat,main.vhat,main.what,grid)
+Energy[0] = utilities.computeEnergy(main,grid)
+Energy_resolved = np.zeros(1) #initialize an array for resolved energy
+Energy_resolved[0] = utilities.computeEnergy_resolved(main,grid)
 
 #========== MAIN TIME INTEGRATION LOOP =======================
 while t <= et:
@@ -44,7 +46,9 @@ while t <= et:
   if (iteration%save_freq == 0): #call the savehook routine every save_freq iterations
     savehook(main,grid,iteration)
   iteration += 1
-  Energy = np.append(Energy, utilities.computeEnergy(main.uhat,main.vhat,main.what,grid) ) #add to the energy array
+  Energy = np.append(Energy, utilities.computeEnergy(main,grid) ) #add to the energy array
+  Energy_resolved = np.append(Energy_resolved, utilities.computeEnergy_resolved(main,grid) ) #add to the energy array
+
   #print out stats
   sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(t) + \
                    "   Energy = " + str(np.real(Energy[-1]))  + "\n")
@@ -54,5 +58,6 @@ while t <= et:
 t1 = time.time()
 print('time = ' + str(t1 - t0))
 Dissipation = 1./dt*(Energy[1::] - Energy[0:-1])
-np.savez('3DSolution/stats',Energy=Energy,Dissipation=Dissipation,t=np.linspace(0,t+dt,np.size(Energy)))
+Dissipation_resolved = 1./dt*(Energy_resolved[1::] - Energy_resolved[0:-1])
+np.savez('3DSolution/stats',Energy=Energy,Dissipation=Dissipation,Energy_resolved=Energy_resolved,Dissipation_resolved=Dissipation_resolved,t=np.linspace(0,t+dt,np.size(Energy)))
 
