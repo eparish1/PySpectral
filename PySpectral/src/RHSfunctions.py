@@ -212,10 +212,10 @@ def computeRHS_tmodel(main,grid,myFFT):
             1j*grid.k2*grid.ksqr_i*(2.*grid.k3*(t2) ) + \
             1j*grid.k3*grid.ksqr_i*(2.*grid.k3*(t3) )
 
-    main.Q[0::3,0::3,0::3] = unpad_2x(PLu,1) + 0.1*main.t*main.PLQLu
+    main.Q[0::3,0::3,0::3] = unpad_2x(PLu,1) + 0.35*main.t*main.PLQLu
 
-    main.Q[1::3,1::3,1::3] = unpad_2x(PLv,1) + 0.1*main.t*main.PLQLv
+    main.Q[1::3,1::3,1::3] = unpad_2x(PLv,1) + 0.35*main.t*main.PLQLv
 
-    main.Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + 0.1*main.t*main.PLQLw
+    main.Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + 0.35*main.t*main.PLQLw
 
 
