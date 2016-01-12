@@ -8,10 +8,11 @@ sys.path.append("../../src")
 N1 = 32
 N2 = 32
 N3 = 32 #this direction is halved for conjugate symmetry
+kc = 16 #cut off frequency
 #-------------------------------------
 
 #----- Physical Properties --------
-nu = 1./1600.
+nu = 1./400.
 #----------------------------------
 
 #----- Solver Settings -----------
@@ -19,7 +20,7 @@ turb_model = 2       #turbulence model
 t = 0                #start time
 et = 10              #end time
 save_freq =20        #frequency to call save_hook
-dt = 0.02            #time step
+dt = 0.01            #time step
 #--------------------------------
 
 #----- FFT properties -----------
@@ -70,10 +71,10 @@ Ds = -rundata['Dissipation']
 Ds[0] = 0
 
 
-mdata = np.load('PySpec_1600_128.npz')
+mdata = np.load('PySpec_800_64.npz')
 tm = mdata['t']
-Em = mdata['Energy']
-Dm = -mdata['Dissipation']
+Em = mdata['Energy_resolved']
+Dm = -mdata['Dissipation_resolved']
 Dm[0] = 0
 
 ta = linspace(0,t,size(Energy))

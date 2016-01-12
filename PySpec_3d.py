@@ -150,8 +150,8 @@ what =  numpy.fft.rfftn(w) / sqrt(N1*N2*N3)
 #t = 0.2: 0.108
 t0 = time.time()
 t = 0
-et = 5
-dt = 1.e-2
+et = 20
+dt = 1.e-1
 Q = zeros((3*N1,3*N2,3*(N3/2+1)),dtype='complex')
 Q = U2Q(Q,uhat,vhat,what)
 iteration = 0

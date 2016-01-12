@@ -78,6 +78,39 @@ class variables:
       self.U2Q = U2Q 
     ##=============================================
 
+    ##============ FM1 model ========================
+    if (turb_model == 3):
+      print('Using the First Order Finite Memory Model')
+      self.dt0 = 0.1
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.Q = np.zeros( (6*grid.N1,6*grid.N2,6*(grid.N3/2+1)),dtype='complex')
+      self.Q[0::6,0::6,0::6] = self.uhat[:,:,:]
+      self.Q[1::6,1::6,1::6] = self.vhat[:,:,:]
+      self.Q[2::6,2::6,2::6] = self.what[:,:,:]
+      self.Q[3::6,3::6,3::6] = self.w0_u[:,:,:]
+      self.Q[4::6,4::6,4::6] = self.w0_v[:,:,:]
+      self.Q[5::6,5::6,5::6] = self.w0_w[:,:,:]
+      def U2Q():
+        self.Q[0::6,0::6,0::6] = self.uhat[:,:,:]
+        self.Q[1::6,1::6,1::6] = self.vhat[:,:,:]
+        self.Q[2::6,2::6,2::6] = self.what[:,:,:]
+        self.Q[3::6,3::6,3::6] = self.w0_u[:,:,:]
+        self.Q[4::6,4::6,4::6] = self.w0_v[:,:,:]
+        self.Q[5::6,5::6,5::6] = self.w0_w[:,:,:]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0::6,0::6,0::6]
+        self.vhat[:,:,:] = self.Q[1::6,1::6,1::6]
+        self.what[:,:,:] = self.Q[2::6,2::6,2::6]
+        self.w0_u[:,:,:] = self.Q[3::6,3::6,3::6]
+        self.w0_v[:,:,:] = self.Q[4::6,4::6,4::6]
+        self.w0_w[:,:,:] = self.Q[5::6,5::6,5::6]
+      self.computeRHS = computeRHS_FM1
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+    ##=============================================
+
 
 
 
@@ -169,6 +202,5 @@ class utilitiesClass():
            np.sum(vFilt[:,:,0]*np.conj(vFilt[:,:,0])) 
       wE = np.sum(wFilt[:,:,1:grid.N3/2]*np.conj(wFilt[:,:,1:grid.N3/2]*2) ) + \
            np.sum(wFilt[:,:,0]*np.conj(wFilt[:,:,0]))
-
       return np.real(0.5*(uE + vE + wE)/(grid.N1*grid.N2*grid.N3))
 

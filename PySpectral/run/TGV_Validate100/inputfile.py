@@ -61,7 +61,7 @@ execfile('../../src/PySpec_3d.py')
 #----------------------------------------
 from pylab import *
 axis_font = {'size':'24','family':'serif','weight':'light'}
-rundata = np.load('3Dsolution/stats.npz')
+rundata = np.load('3DSolution/stats.npz')
 ts = rundata['t']
 Es = rundata['Energy']
 Ds = -rundata['Dissipation']
