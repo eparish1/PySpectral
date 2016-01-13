@@ -81,7 +81,7 @@ class variables:
     ##============ FM1 model ========================
     if (turb_model == 3):
       print('Using the First Order Finite Memory Model')
-      self.dt0 = 0.1
+      self.dt0 = 0.5
       self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
       self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
       self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
@@ -145,10 +145,10 @@ class gridclass:
     self.kc = kc
     self.Delta = np.pi/self.kc
     self.Gf = np.zeros(np.shape(self.k1)) #Sharp Spectral cutoff (we cutoff the oddball frequency)
-    self.Gf[0:self.kc,0:self.kc,0:self.kc] = 1 # get first quardants
-    self.Gf[0:self.kc,self.N2-self.kc+1::,0:self.kc] = 1 #0:kc in k1 and -kc:0 in k2
-    self.Gf[self.N1-self.kc+1::,0:self.kc,0:self.kc] = 1 #-kc:0 in k1 and 0:kc in k2
-    self.Gf[self.N1-self.kc+1::,self.N2-self.kc+1::,0:self.kc] = 1 #-kc:0 in k1 and k2
+    self.Gf[0:self.kc+1,0:self.kc+1,0:self.kc+1] = 1 # get first quardants
+    self.Gf[0:self.kc+1,self.N2-self.kc::,0:self.kc+1] = 1 #0:kc in k1 and -kc:0 in k2
+    self.Gf[self.N1-self.kc::,0:self.kc+1,0:self.kc+1] = 1 #-kc:0 in k1 and 0:kc in k2
+    self.Gf[self.N1-self.kc::,self.N2-self.kc::,0:self.kc+1] = 1 #-kc:0 in k1 and k2
 
 class FFTclass:
   def __init__(self,N1,N2,N3,nthreads):

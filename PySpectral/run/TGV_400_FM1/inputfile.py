@@ -16,7 +16,7 @@ nu = 1./400.
 #----------------------------------
 
 #----- Solver Settings -----------
-turb_model = 2       #turbulence model
+turb_model = 3       #turbulence model
 t = 0                #start time
 et = 10              #end time
 save_freq =20        #frequency to call save_hook
@@ -53,7 +53,7 @@ def savehook(main,grid,iteration):
     #gridToVTK(string, grid.x,grid.y,grid.z, pointData = {"u" : np.real(u.transpose()) , \
     #  "v" : np.real(v.transpose()), \
     #  "w" : np.real(w.transpose())} )
-    np.savez_compressed(string2,uhat=main.uhat,vhat=main.vhat,what=main.what,PLQLu=main.PLQLu,PLQLv=main.PLQLv,PLQLw=main.PLQLw,t=main.t)
+    np.savez_compressed(string2,uhat=main.uhat,vhat=main.vhat,what=main.what,t=main.t)
 #----------------------------------------------------------
 
 #------ Run Solver -----------------------
@@ -79,7 +79,7 @@ Dm[0] = 0
 
 ta = linspace(0,t,size(Energy))
 plot(tm[:],Em[0::],color='black',label='Resolved Energy')
-plot(ts,Es,color='red',label='t-model')
+plot(ts,Es,color='red',label='FM1')
 xlim([0,20])
 xlabel(r'$t$',**axis_font)
 ylabel(r'Energy',**axis_font)
@@ -87,8 +87,8 @@ legend(loc = 1)
 savefig('Validate_E.pdf')
 
 figure(2)
-plot(tm[1::],Dm[0::],color='black',label='Resolved Dissipation')
-plot(ts[1::],Ds,color='red',label='t-model')
+plot(tm[1::],Dm[0::],color='black',label='Resolved Energy')
+plot(ts[1::],Ds,color='red',label='FM1')
 legend(loc = 1)
 xlabel(r'$t$',**axis_font)
 ylabel(r'Dissipation',**axis_font)

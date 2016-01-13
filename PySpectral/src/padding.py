@@ -56,6 +56,9 @@ def seperateModes(uhat_pad,arrange):
   u_p = np.zeros((2*N1,2*N2,2*N3-1),dtype = 'complex')
   u_q = np.zeros((2*N1,2*N2,2*N3-1),dtype = 'complex')
   # the modes in q should include the oddball
-  u_q[N1/2:2*N1-N1/2+1, N2/2:2*N2-N2/2+1, N3-1::] = uhat_pad[N1/2:2*N1-N1/2+1, N2/2:2*N2-N2/2+1, N3-1::]                                    
-  u_p = uhat_pad - u_q
+  u_p[0:N1/2,0:N2/2,0:-N3] = uhat_pad[0:N1/2,0:N2/2,0:-N3]                                    
+  u_p[-N1/2+1::,0:N2/2,0:-N3] = uhat_pad[-N1/2+1::,0:N2/2,0:-N3]
+  u_p[0:N1/2,-N2/2+1::,0:-N3] = uhat_pad[0:N1/2,-N2/2+1::,0:-N3] 
+  u_p[-N1/2+1::,-N2/2+1::,0:-N3] = uhat_pad[-N1/2+1::,-N2/2+1::,0:-N3] 
+  u_q = uhat_pad - u_p
   return u_p,u_q
