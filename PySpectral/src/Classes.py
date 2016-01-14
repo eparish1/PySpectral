@@ -2,7 +2,7 @@ import numpy as np
 import pyfftw
 from RHSfunctions import *
 class variables:
-  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu):
+  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,dt0):
     self.turb_model = turb_model
     self.t = t
     self.kc = np.amax(grid.k1)
@@ -82,7 +82,12 @@ class variables:
     ##============ FM1 model ========================
     if (turb_model == 3):
       print('Using the First Order Finite Memory Model')
-      self.dt0 = 0.1
+      if dt0 == -10:
+        print('Did not assign dt0 for FM1 Model, using default dt0=0.1')
+        self.dt0 = 0.1
+      else:
+        print('Assigning dt0 = ' + str(dt0))
+        self.dt0 = dt0
       self.PLQLu = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
       self.PLQLv = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
       self.PLQLw = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')

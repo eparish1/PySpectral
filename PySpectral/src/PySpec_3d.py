@@ -7,7 +7,12 @@ from Classes import gridclass, FFTclass, variables,utilitiesClass
 utilities = utilitiesClass()
 myFFT = FFTclass(N1,N2,N3,nthreads)
 grid = gridclass(N1,N2,N3,x,y,z,kc)
-main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu)
+
+if 'dt0' in globals():
+  pass
+else:
+  dt0 = -10
+main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,dt0)
 
 # Make Solution Directory if it does not exist
 if not os.path.exists('3DSolution'):
