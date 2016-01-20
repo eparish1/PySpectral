@@ -213,3 +213,26 @@ class utilitiesClass():
            np.sum(wFilt[:,:,0]*np.conj(wFilt[:,:,0]))
       return np.real(0.5*(uE + vE + wE)/(grid.N1*grid.N2*grid.N3))
 
+  def computeSpectrum(self,main,grid):
+      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten())), return_inverse=True)
+      k_0, indices2 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,0].flatten())), return_inverse=True)
+      spectrum = np.zeros((np.size(k_m),3),dtype='complex')
+      np.add.at(spectrum[:,0],indices1,2*main.uhat[:,:,1:grid.N3/2].flatten()*np.conj(main.uhat[:,:,1:grid.N3/2].flatten()))
+      np.add.at(spectrum[1::,0],indices2,main.uhat[:,:,0].flatten()*np.conj(main.uhat[:,:,0].flatten()))
+      np.add.at(spectrum[:,1],indices1,2*main.vhat[:,:,1:grid.N3/2].flatten()*np.conj(main.vhat[:,:,1:grid.N3/2].flatten()))
+      np.add.at(spectrum[1::,1],indices2,main.vhat[:,:,0].flatten()*np.conj(main.vhat[:,:,0].flatten()))
+      np.add.at(spectrum[:,2],indices1,2*main.what[:,:,1:grid.N3/2].flatten()*np.conj(main.what[:,:,1:grid.N3/2].flatten()))
+      np.add.at(spectrum[1::,2],indices2,main.what[:,:,0].flatten()*np.conj(main.what[:,:,0].flatten()))
+      return k_m,spectrum
+
+   def computeSpectrum_resolved(self,main,grid):
+      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[0:grid.kc,0:grid.kc,1:grid.kc].flatten())), return_inverse=True)
+      k_0, indices2 = np.unique(np.rint(np.sqrt(grid.ksqr[0:grid.kc,0:grid.kc,0].flatten())), return_inverse=True)
+      spectrum = np.zeros((np.size(k_m),3),dtype='complex')
+      np.add.at(spectrum[:,0],indices1,2*main.uhat[0:grid.kc,0:grid.kc,1:grid.kc].flatten()*np.conj(main.uhat[:,:,1:grid.N3/2].flatten()))
+      np.add.at(spectrum[1::,0],indices2,main.uhat[:,:,0].flatten()*np.conj(main.uhat[:,:,0].flatten()))
+      np.add.at(spectrum[:,1],indices1,2*main.vhat[:,:,1:grid.N3/2].flatten()*np.conj(main.vhat[:,:,1:grid.N3/2].flatten()))
+      np.add.at(spectrum[1::,1],indices2,main.vhat[:,:,0].flatten()*np.conj(main.vhat[:,:,0].flatten()))
+      np.add.at(spectrum[:,2],indices1,2*main.what[:,:,1:grid.N3/2].flatten()*np.conj(main.what[:,:,1:grid.N3/2].flatten()))
+      np.add.at(spectrum[1::,2],indices2,main.what[:,:,0].flatten()*np.conj(main.what[:,:,0].flatten()))
+      return k_m,spectrum 
