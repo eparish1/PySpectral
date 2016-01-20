@@ -2,7 +2,7 @@ import numpy as np
 import pyfftw
 from RHSfunctions import *
 class variables:
-  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,dt0):
+  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,cfl):
     self.turb_model = turb_model
     self.t = t
     self.kc = np.amax(grid.k1)
@@ -15,7 +15,7 @@ class variables:
     self.vhat[:,:,:] = vhat[:,:,:]
     self.what = np.zeros((grid.N1,grid.N2,grid.N3/2+1),dtype='complex')
     self.what[:,:,:] = what[:,:,:]
-
+    self.cfl = cfl
     ##============ DNS MODE ========================
     if (turb_model == 0):
       print('Not using any SGS')
@@ -213,6 +213,19 @@ class utilitiesClass():
            np.sum(wFilt[:,:,0]*np.conj(wFilt[:,:,0]))
       return np.real(0.5*(uE + vE + wE)/(grid.N1*grid.N2*grid.N3))
 
+  def compute_dt(self,main,grid):
+    if (main.cfl > 0):
+      u = np.fft.irfftn(main.uhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+      v = np.fft.irfftn(main.vhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+      w = np.fft.irfftn(main.what)*np.sqrt(grid.N1*grid.N2*grid.N3)
+      max_vel = np.amax( abs(u)/grid.dx + abs(v)/grid.dy + abs(w)/grid.dz)
+      main.dt = main.cfl/(max_vel + 1e-10)
+      if (main.nu > 0):
+        main.dt=np.minimum(main.dt,0.634/(1./grid.dx**2+1./grid.dy**2+1./grid.dz**2)/main.nu*main.cfl/1.35)
+    else:
+      main.dt = -main.cfl
+
+
   def computeSpectrum(self,main,grid):
       k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten())), return_inverse=True)
       k_0, indices2 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,0].flatten())), return_inverse=True)
@@ -223,16 +236,21 @@ class utilitiesClass():
       np.add.at(spectrum[1::,1],indices2,main.vhat[:,:,0].flatten()*np.conj(main.vhat[:,:,0].flatten()))
       np.add.at(spectrum[:,2],indices1,2*main.what[:,:,1:grid.N3/2].flatten()*np.conj(main.what[:,:,1:grid.N3/2].flatten()))
       np.add.at(spectrum[1::,2],indices2,main.what[:,:,0].flatten()*np.conj(main.what[:,:,0].flatten()))
+      spectrum = spectrum/(grid.N1*grid.N2*grid.N3)
       return k_m,spectrum
 
-   def computeSpectrum_resolved(self,main,grid):
-      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[0:grid.kc,0:grid.kc,1:grid.kc].flatten())), return_inverse=True)
-      k_0, indices2 = np.unique(np.rint(np.sqrt(grid.ksqr[0:grid.kc,0:grid.kc,0].flatten())), return_inverse=True)
+  def computeSpectrum_resolved(self,main,grid):
+      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten())), return_inverse=True)
+      k_0, indices2 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,0].flatten())), return_inverse=True)
+      uFilt = grid.Gf*main.uhat
+      vFilt = grid.Gf*main.vhat
+      wFilt = grid.Gf*main.what
       spectrum = np.zeros((np.size(k_m),3),dtype='complex')
-      np.add.at(spectrum[:,0],indices1,2*main.uhat[0:grid.kc,0:grid.kc,1:grid.kc].flatten()*np.conj(main.uhat[:,:,1:grid.N3/2].flatten()))
-      np.add.at(spectrum[1::,0],indices2,main.uhat[:,:,0].flatten()*np.conj(main.uhat[:,:,0].flatten()))
-      np.add.at(spectrum[:,1],indices1,2*main.vhat[:,:,1:grid.N3/2].flatten()*np.conj(main.vhat[:,:,1:grid.N3/2].flatten()))
-      np.add.at(spectrum[1::,1],indices2,main.vhat[:,:,0].flatten()*np.conj(main.vhat[:,:,0].flatten()))
-      np.add.at(spectrum[:,2],indices1,2*main.what[:,:,1:grid.N3/2].flatten()*np.conj(main.what[:,:,1:grid.N3/2].flatten()))
-      np.add.at(spectrum[1::,2],indices2,main.what[:,:,0].flatten()*np.conj(main.what[:,:,0].flatten()))
+      np.add.at(spectrum[:,0],indices1,2*uFilt[:,:,1:grid.N3/2].flatten()*np.conj(uFilt[:,:,1:grid.N3/2].flatten()))
+      np.add.at(spectrum[1::,0],indices2,uFilt[:,:,0].flatten()*np.conj(uFilt[:,:,0].flatten()))
+      np.add.at(spectrum[:,1],indices1,2*vFilt[:,:,1:grid.N3/2].flatten()*np.conj(vFilt[:,:,1:grid.N3/2].flatten()))
+      np.add.at(spectrum[1::,1],indices2,vFilt[:,:,0].flatten()*np.conj(vFilt[:,:,0].flatten()))
+      np.add.at(spectrum[:,2],indices1,2*wFilt[:,:,1:grid.N3/2].flatten()*np.conj(wFilt[:,:,1:grid.N3/2].flatten()))
+      np.add.at(spectrum[1::,2],indices2,wFilt[:,:,0].flatten()*np.conj(wFilt[:,:,0].flatten()))
+      spectrum = spectrum/(grid.N1*grid.N2*grid.N3)
       return k_m,spectrum 
