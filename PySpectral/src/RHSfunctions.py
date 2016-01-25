@@ -328,12 +328,26 @@ def computeRHS_FM1(main,grid,myFFT):
             1j*grid.k1*wp_PLuq - 1j*grid.k2*wp_PLvq - 1j*grid.k3*wp_PLwq + \
             1j*grid.k3*pterm
 
-    main.Q[0::6,0::6,0::6] = unpad_2x(PLu,1) + main.w0_u
-    main.Q[1::6,1::6,1::6] = unpad_2x(PLv,1) + main.w0_v
-    main.Q[2::6,2::6,2::6] = unpad_2x(PLw,1) + main.w0_w
-    main.Q[3::6,3::6,3::6] = -2./main.dt0*main.w0_u + 2.*main.PLQLu 
-    main.Q[4::6,4::6,4::6] = -2./main.dt0*main.w0_v + 2.*main.PLQLv
-    main.Q[5::6,5::6,5::6] = -2./main.dt0*main.w0_w + 2.*main.PLQLw
+
+
+    main.Q[0::main.nvars,0::main.nvars,0::main.nvars] = unpad_2x(PLu,1) + np.sum(main.w0_u,axis=3)
+    main.Q[1::main.nvars,1::main.nvars,1::main.nvars] = unpad_2x(PLv,1) + np.sum(main.w0_v,axis=3)
+    main.Q[2::main.nvars,2::main.nvars,2::main.nvars] = unpad_2x(PLw,1) + np.sum(main.w0_w,axis=3)
+
+    sum_u = np.zeros(np.shape(main.uhat),dtype='complex') 
+    sum_v = np.zeros(np.shape(main.vhat),dtype='complex') 
+    sum_w = np.zeros(np.shape(main.what),dtype='complex') 
+    term = 3 
+    dt0 = main.dt0/main.dt0_subintegrations
+    for i in range(1,main.dt0_subintegrations+1):
+      for j in range(1,i):
+        sum_u += 4./dt0*(-1.)**(i+j+1)*main.w0_u[:,:,:,j-1]
+        sum_v += 4./dt0*(-1.)**(i+j+1)*main.w0_v[:,:,:,j-1]
+        sum_w += 4./dt0*(-1.)**(i+j+1)*main.w0_w[:,:,:,j-1]
+      main.Q[term+0::main.nvars,term+0::main.nvars,term+0::main.nvars]  = -2./dt0*main.w0_u[:,:,:,i-1] + (-1.)**(i+1)*2.*main.PLQLu + sum_u
+      main.Q[term+1::main.nvars,term+1::main.nvars,term+1::main.nvars]  = -2./dt0*main.w0_v[:,:,:,i-1] + (-1.)**(i+1)*2.*main.PLQLv + sum_v
+      main.Q[term+2::main.nvars,term+2::main.nvars,term+2::main.nvars]  = -2./dt0*main.w0_w[:,:,:,i-1] + (-1.)**(i+1)*2.*main.PLQLw + sum_w
+      term += 3
 
 
 def computeRHS_FM2(main,grid,myFFT):

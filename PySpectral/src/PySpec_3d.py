@@ -23,7 +23,12 @@ if 'dt1' in globals():
 else:
   dt1 = -10
 
-main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,dt1,cfl)
+if 'dt0_subintegrations' in globals():
+  pass
+else:
+  dt0_subintegrations = -10
+
+main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,dt0_subintegrations,dt1,cfl)
 
 # Make Solution Directory if it does not exist
 if not os.path.exists('3DSolution'):

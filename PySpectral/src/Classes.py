@@ -2,7 +2,7 @@ import numpy as np
 import pyfftw
 from RHSfunctions import *
 class variables:
-  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,dt1,cfl):
+  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,dt0_subintegrations,dt1,cfl):
     self.turb_model = turb_model
     self.t = t
     self.kc = np.amax(grid.k1)
@@ -81,6 +81,7 @@ class variables:
 
     ##============ FM1 model ========================
     if (turb_model == 3):
+
       print('Using the First Order Finite Memory Model')
       if dt0 == -10:
         print('Did not assign dt0 for FM1 Model, using default dt0=0.1')
@@ -88,33 +89,52 @@ class variables:
       else:
         print('Assigning dt0 = ' + str(dt0))
         self.dt0 = dt0
-      self.PLQLu = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
-      self.PLQLv = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
-      self.PLQLw = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
-      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
-      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
-      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
-      self.Q = np.zeros( (6*grid.N1,6*grid.N2,6*(grid.N3/2+1)),dtype='complex')
-      self.Q[0::6,0::6,0::6] = self.uhat[:,:,:]
-      self.Q[1::6,1::6,1::6] = self.vhat[:,:,:]
-      self.Q[2::6,2::6,2::6] = self.what[:,:,:]
-      self.Q[3::6,3::6,3::6] = self.w0_u[:,:,:]
-      self.Q[4::6,4::6,4::6] = self.w0_v[:,:,:]
-      self.Q[5::6,5::6,5::6] = self.w0_w[:,:,:]
+
+      if dt0_subintegrations == -10:
+        print('Did not assign dt0_subintegrations for FM1 Model, using default dt_subintegrations=1')
+        self.dt0_subintegrations = 1
+      else:
+        print('Assigning dt0_subintegrations = ' + str(dt0_subintegrations))
+        self.dt0_subintegrations = dt0_subintegrations
+
+      self.PLQLu = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),self.dt0_subintegrations),dtype='complex')
+      self.PLQLv = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),self.dt0_subintegrations),dtype='complex')
+      self.PLQLw = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),self.dt0_subintegrations),dtype='complex')
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),self.dt0_subintegrations),dtype='complex')
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),self.dt0_subintegrations),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),self.dt0_subintegrations),dtype='complex')
+      self.nvars = 3 + 3*self.dt0_subintegrations
+      self.Q = np.zeros( (self.nvars*grid.N1,self.nvars*grid.N2,self.nvars*(grid.N3/2+1)),dtype='complex')
+      self.Q[0::self.nvars,0::self.nvars,0::self.nvars] = self.uhat[:,:,:]
+      self.Q[1::self.nvars,1::self.nvars,1::self.nvars] = self.vhat[:,:,:]
+      self.Q[2::self.nvars,2::self.nvars,2::self.nvars] = self.what[:,:,:]
+      j = 3
+      for i in range(0,self.dt0_subintegrations):
+        self.Q[j  ::self.nvars,j  ::self.nvars,j  ::self.nvars] = self.w0_u[:,:,:,i]
+        self.Q[j+1::self.nvars,j+1::self.nvars,j+1::self.nvars] = self.w0_v[:,:,:,i]
+        self.Q[j+2::self.nvars,j+2::self.nvars,j+2::self.nvars] = self.w0_w[:,:,:,i]
+        j += 3
+
       def U2Q():
-        self.Q[0::6,0::6,0::6] = self.uhat[:,:,:]
-        self.Q[1::6,1::6,1::6] = self.vhat[:,:,:]
-        self.Q[2::6,2::6,2::6] = self.what[:,:,:]
-        self.Q[3::6,3::6,3::6] = self.w0_u[:,:,:]
-        self.Q[4::6,4::6,4::6] = self.w0_v[:,:,:]
-        self.Q[5::6,5::6,5::6] = self.w0_w[:,:,:]
+        self.Q[0::self.nvars,0::self.nvars,0::self.nvars] = self.uhat[:,:,:]
+        self.Q[1::self.nvars,1::self.nvars,1::self.nvars] = self.vhat[:,:,:]
+        self.Q[2::self.nvars,2::self.nvars,2::self.nvars] = self.what[:,:,:]
+        j = 3
+        for i in range(0,self.dt0_subintegrations):
+          self.Q[j  ::self.nvars,j  ::self.nvars,j  ::self.nvars] = self.w0_u[:,:,:,i]
+          self.Q[j+1::self.nvars,j+1::self.nvars,j+1::self.nvars] = self.w0_v[:,:,:,i]
+          self.Q[j+2::self.nvars,j+2::self.nvars,j+2::self.nvars] = self.w0_w[:,:,:,i]
+          j += 3
       def Q2U():
-        self.uhat[:,:,:] = self.Q[0::6,0::6,0::6]
-        self.vhat[:,:,:] = self.Q[1::6,1::6,1::6]
-        self.what[:,:,:] = self.Q[2::6,2::6,2::6]
-        self.w0_u[:,:,:] = self.Q[3::6,3::6,3::6]
-        self.w0_v[:,:,:] = self.Q[4::6,4::6,4::6]
-        self.w0_w[:,:,:] = self.Q[5::6,5::6,5::6]
+        self.uhat[:,:,:] = self.Q[0::self.nvars,0::self.nvars,0::self.nvars]
+        self.vhat[:,:,:] = self.Q[1::self.nvars,1::self.nvars,1::self.nvars]
+        self.what[:,:,:] = self.Q[2::self.nvars,2::self.nvars,2::self.nvars]
+        j = 3
+        for i in range(0,self.dt0_subintegrations):
+          self.w0_u[:,:,:,i] = self.Q[j  ::self.nvars,j  ::self.nvars,j  ::self.nvars]
+          self.w0_v[:,:,:,i] = self.Q[j+1::self.nvars,j+1::self.nvars,j+1::self.nvars]
+          self.w0_w[:,:,:,i] = self.Q[j+2::self.nvars,j+2::self.nvars,j+2::self.nvars]
+          j += 3
       self.computeRHS = computeRHS_FM1
       self.Q2U = Q2U
       self.U2Q = U2Q 
