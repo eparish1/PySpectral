@@ -543,4 +543,125 @@ def computeRHS_FM2(main,grid,myFFT):
     main.Q[6::9,6::9,6::9] = -2./main.dt1*main.w1_u + 2.*PLQLQLu  
     main.Q[7::9,7::9,7::9] = -2./main.dt1*main.w1_v + 2.*PLQLQLv 
     main.Q[8::9,8::9,8::9] = -2./main.dt1*main.w1_w + 2.*PLQLQLw
+#    main.Q[3::9,3::9,3::9] = PLQLu + 0.0001*main.t*PLQLQLu 
+#    main.Q[4::9,4::9,4::9] = PLQLv + 0.0001*main.t*PLQLQLv
+#    main.Q[5::9,5::9,5::9] = PLQLw + 0.0001*main.t*PLQLQLw
+
+
+
+def computeRHS_FM1_2term(main,grid,myFFT):
+    main.Q2U()
+    ## in the t-model, do 2x padding because we want to have convolutions where 
+    ## the modes in G support twice the modes in F.
+    scale = np.sqrt( (2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
+    ureal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+    vreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+    wreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+
+    ureal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    vreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    wreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+
+    PLu_qreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    PLv_qreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    PLw_qreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+
+    PLu_p = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLv_p = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLw_p = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLu_q = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLv_q = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLw_q = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+
+    main.uhat = unpad(pad(main.uhat,1),1)
+    main.vhat = unpad(pad(main.vhat,1),1)
+    main.what = unpad(pad(main.what,1),1)
+
+
+    uhat_pad = pad_2x(main.uhat,1)
+    vhat_pad = pad_2x(main.vhat,1)
+    what_pad = pad_2x(main.what,1)
+    ureal[:,:,:] = myFFT.ifftT_obj2(uhat_pad*scale)
+    vreal[:,:,:] = myFFT.ifftT_obj2(vhat_pad*scale)
+    wreal[:,:,:] = myFFT.ifftT_obj2(what_pad*scale)
+
+    uuhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    vvhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    wwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    uvhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    uwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    vwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+
+    uuhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*ureal[:,:,:])
+    vvhat[:,:,:] = myFFT.fft_obj2(vreal[:,:,:]*vreal[:,:,:])
+    wwhat[:,:,:] = myFFT.fft_obj2(wreal[:,:,:]*wreal[:,:,:])
+    uvhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*vreal[:,:,:])
+    uwhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*wreal[:,:,:])
+    vwhat[:,:,:] = myFFT.fft_obj2(vreal[:,:,:]*wreal[:,:,:])
+
+    uuhat2 = unpad_2x(uuhat,1)
+    vvhat2 = unpad_2x(vvhat,1)
+    wwhat2 = unpad_2x(wwhat,1)
+    uvhat2 = unpad_2x(uvhat,1)
+    uwhat2 = unpad_2x(uwhat,1)
+    vwhat2 = unpad_2x(vwhat,1)
+
+    phat  = -grid.k1f*grid.k1f*grid.ksqrf_i*uuhat - grid.k2f*grid.k2f*grid.ksqrf_i*vvhat - \
+             grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
+             2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
+
+    PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
+                                         1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
+
+    PLv = -1j*grid.k1f*uvhat - 1j*grid.k2f*vvhat - 1j*grid.k3f*vwhat - \
+                                         1j*grid.k2f*phat - main.nu*grid.ksqrf*pad_2x(main.vhat,1)
+
+    PLw = -1j*grid.k1f*uwhat - 1j*grid.k2f*vwhat - 1j*grid.k3f*wwhat - \
+                                         1j*grid.k3f*phat - main.nu*grid.ksqrf*pad_2x(main.what,1)
+
+    PLu_p[:,:,:],PLu_q[:,:,:] = seperateModes(PLu,1)
+    PLv_p[:,:,:],PLv_q[:,:,:] = seperateModes(PLv,1)
+    PLw_p[:,:,:],PLw_q[:,:,:] = seperateModes(PLw,1)
+
+    PLu_qreal[:,:,:] = myFFT.ifftT_obj2(PLu_q*scale)
+    PLv_qreal[:,:,:] = myFFT.ifftT_obj2(PLv_q*scale)
+    PLw_qreal[:,:,:] = myFFT.ifftT_obj2(PLw_q*scale)
+
+    up_PLuq = unpad_2x( myFFT.fft_obj2(ureal*PLu_qreal),1)
+    vp_PLuq = unpad_2x( myFFT.fft_obj2(vreal*PLu_qreal),1)
+    wp_PLuq = unpad_2x( myFFT.fft_obj2(wreal*PLu_qreal),1)
+
+    up_PLvq = unpad_2x( myFFT.fft_obj2(ureal*PLv_qreal),1)
+    vp_PLvq = unpad_2x( myFFT.fft_obj2(vreal*PLv_qreal),1)
+    wp_PLvq = unpad_2x( myFFT.fft_obj2(wreal*PLv_qreal),1)
+
+    up_PLwq = unpad_2x( myFFT.fft_obj2(ureal*PLw_qreal),1)
+    vp_PLwq = unpad_2x( myFFT.fft_obj2(vreal*PLw_qreal),1)
+    wp_PLwq = unpad_2x( myFFT.fft_obj2(wreal*PLw_qreal),1)
+
+    pterm = 2.*grid.ksqr_i*( grid.k1*grid.k1*up_PLuq + grid.k2*grid.k2*vp_PLvq + grid.k3*grid.k3*wp_PLwq + \
+                          grid.k1*grid.k2*(up_PLvq + vp_PLuq) + grid.k1*grid.k3*(up_PLwq + wp_PLuq) + \
+                          grid.k2*grid.k3*(vp_PLwq + wp_PLvq) )
+
+    main.PLQLu = -1j*grid.k1*up_PLuq - 1j*grid.k2*vp_PLuq - 1j*grid.k3*wp_PLuq - \
+            1j*grid.k1*up_PLuq - 1j*grid.k2*up_PLvq - 1j*grid.k3*up_PLwq + \
+            1j*grid.k1*pterm
+
+    main.PLQLv = -1j*grid.k1*up_PLvq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*wp_PLvq - \
+            1j*grid.k1*vp_PLuq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*vp_PLwq + \
+            1j*grid.k2*pterm
+
+    main.PLQLw = -1j*grid.k1*up_PLwq - 1j*grid.k2*vp_PLwq - 1j*grid.k3*wp_PLwq -\
+            1j*grid.k1*wp_PLuq - 1j*grid.k2*wp_PLvq - 1j*grid.k3*wp_PLwq + \
+            1j*grid.k3*pterm
+
+    main.Q[0::9,0::9,0::9] = unpad_2x(PLu,1) + main.w0_u + main.w01_u
+    main.Q[1::9,1::9,1::9] = unpad_2x(PLv,1) + main.w0_v + main.w01_v
+    main.Q[2::9,2::9,2::9] = unpad_2x(PLw,1) + main.w0_w + main.w01_w
+    main.Q[3::9,3::9,3::9] = -2./main.dt0*main.w0_u + 2.*main.PLQLu 
+    main.Q[4::9,4::9,4::9] = -2./main.dt0*main.w0_v + 2.*main.PLQLv
+    main.Q[5::9,5::9,5::9] = -2./main.dt0*main.w0_w + 2.*main.PLQLw
+    main.Q[6::9,6::9,6::9] = -2./main.dt0*main.w01_u - 2.*main.PLQLu + 4./main.dt0*main.w0_u 
+    main.Q[7::9,7::9,7::9] = -2./main.dt0*main.w01_v - 2.*main.PLQLv + 4./main.dt0*main.w0_v
+    main.Q[8::9,8::9,8::9] = -2./main.dt0*main.w01_w - 2.*main.PLQLw + 4./main.dt0*main.w0_w
 

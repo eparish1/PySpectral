@@ -180,6 +180,57 @@ class variables:
 
 
 
+    ##============ FM1 model -two term trapezoidal ========================
+    if (turb_model == 5):
+      print('Using the Second Order Finite Memory Model')
+      if dt0 == -10:
+        print('Did not assign dt0 for FM1 Model, using default dt0=0.1')
+        self.dt0 = 0.1
+      else:
+        print('Assigning dt0 = ' + str(dt0))
+        self.dt0 = dt0
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w01_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w01_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w01_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+
+      self.Q = np.zeros( (9*grid.N1,9*grid.N2,9*(grid.N3/2+1)),dtype='complex')
+      self.Q[0::9,0::9,0::9] = self.uhat[:,:,:]
+      self.Q[1::9,1::9,1::9] = self.vhat[:,:,:]
+      self.Q[2::9,2::9,2::9] = self.what[:,:,:]
+      self.Q[3::9,3::9,3::9] = self.w0_u[:,:,:]
+      self.Q[4::9,4::9,4::9] = self.w0_v[:,:,:]
+      self.Q[5::9,5::9,5::9] = self.w0_w[:,:,:]
+      self.Q[6::9,6::9,6::9] = self.w01_u[:,:,:]
+      self.Q[7::9,7::9,7::9] = self.w01_v[:,:,:]
+      self.Q[8::9,8::9,8::9] = self.w01_w[:,:,:]
+      def U2Q():
+        self.Q[0::9,0::9,0::9] = self.uhat[:,:,:]
+        self.Q[1::9,1::9,1::9] = self.vhat[:,:,:]
+        self.Q[2::9,2::9,2::9] = self.what[:,:,:]
+        self.Q[3::9,3::9,3::9] = self.w0_u[:,:,:]
+        self.Q[4::9,4::9,4::9] = self.w0_v[:,:,:]
+        self.Q[5::9,5::9,5::9] = self.w0_w[:,:,:]
+        self.Q[6::9,6::9,6::9] = self.w01_u[:,:,:]
+        self.Q[7::9,7::9,7::9] = self.w01_v[:,:,:]
+        self.Q[8::9,8::9,8::9] = self.w01_w[:,:,:]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0::9,0::9,0::9]
+        self.vhat[:,:,:] = self.Q[1::9,1::9,1::9]
+        self.what[:,:,:] = self.Q[2::9,2::9,2::9]
+        self.w0_u[:,:,:] = self.Q[3::9,3::9,3::9]
+        self.w0_v[:,:,:] = self.Q[4::9,4::9,4::9]
+        self.w0_w[:,:,:] = self.Q[5::9,5::9,5::9]
+        self.w01_u[:,:,:] = self.Q[6::9,6::9,6::9]
+        self.w01_v[:,:,:] = self.Q[7::9,7::9,7::9]
+        self.w01_w[:,:,:] = self.Q[8::9,8::9,8::9]
+
+      self.computeRHS = computeRHS_FM1_2term
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+    ##=============================================
 
 
 
