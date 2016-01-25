@@ -2,7 +2,7 @@ import numpy as np
 import pyfftw
 from RHSfunctions import *
 class variables:
-  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,cfl):
+  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,dt1,cfl):
     self.turb_model = turb_model
     self.t = t
     self.kc = np.amax(grid.k1)
@@ -120,6 +120,64 @@ class variables:
       self.U2Q = U2Q 
     ##=============================================
 
+    ##============ FM2 model ========================
+    if (turb_model == 4):
+      print('Using the Second Order Finite Memory Model')
+      if dt0 == -10:
+        print('Did not assign dt0 for FM2 Model, using default dt0=0.1')
+        self.dt0 = 0.1
+      else:
+        print('Assigning dt0 = ' + str(dt0))
+        self.dt0 = dt0
+      if dt1 == -10:
+        print('Did not assign dt1 for FM2 Model, using default dt1=0.05')
+        self.dt1 = 0.05
+      else:
+        print('Assigning dt1 = ' + str(dt1))
+        self.dt1 = dt1
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w1_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w1_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.w1_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+
+      self.Q = np.zeros( (9*grid.N1,9*grid.N2,9*(grid.N3/2+1)),dtype='complex')
+      self.Q[0::9,0::9,0::9] = self.uhat[:,:,:]
+      self.Q[1::9,1::9,1::9] = self.vhat[:,:,:]
+      self.Q[2::9,2::9,2::9] = self.what[:,:,:]
+      self.Q[3::9,3::9,3::9] = self.w0_u[:,:,:]
+      self.Q[4::9,4::9,4::9] = self.w0_v[:,:,:]
+      self.Q[5::9,5::9,5::9] = self.w0_w[:,:,:]
+      self.Q[6::9,6::9,6::9] = self.w1_u[:,:,:]
+      self.Q[7::9,7::9,7::9] = self.w1_v[:,:,:]
+      self.Q[8::9,8::9,8::9] = self.w1_w[:,:,:]
+      def U2Q():
+        self.Q[0::9,0::9,0::9] = self.uhat[:,:,:]
+        self.Q[1::9,1::9,1::9] = self.vhat[:,:,:]
+        self.Q[2::9,2::9,2::9] = self.what[:,:,:]
+        self.Q[3::9,3::9,3::9] = self.w0_u[:,:,:]
+        self.Q[4::9,4::9,4::9] = self.w0_v[:,:,:]
+        self.Q[5::9,5::9,5::9] = self.w0_w[:,:,:]
+        self.Q[6::9,6::9,6::9] = self.w1_u[:,:,:]
+        self.Q[7::9,7::9,7::9] = self.w1_v[:,:,:]
+        self.Q[8::9,8::9,8::9] = self.w1_w[:,:,:]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0::9,0::9,0::9]
+        self.vhat[:,:,:] = self.Q[1::9,1::9,1::9]
+        self.what[:,:,:] = self.Q[2::9,2::9,2::9]
+        self.w0_u[:,:,:] = self.Q[3::9,3::9,3::9]
+        self.w0_v[:,:,:] = self.Q[4::9,4::9,4::9]
+        self.w0_w[:,:,:] = self.Q[5::9,5::9,5::9]
+        self.w1_u[:,:,:] = self.Q[6::9,6::9,6::9]
+        self.w1_v[:,:,:] = self.Q[7::9,7::9,7::9]
+        self.w1_w[:,:,:] = self.Q[8::9,8::9,8::9]
+
+      self.computeRHS = computeRHS_FM2
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+    ##=============================================
+
 
 
 
@@ -136,6 +194,9 @@ class gridclass:
     self.y[:,:,:] = y[:,:,:]
     self.z = np.zeros(np.shape(z))
     self.z[:,:,:] = z[:,:,:]
+    self.dx = x[1,0,0] - x[0,0,0]
+    self.dy = y[0,1,0] - y[0,0,0]
+    self.dz = z[0,0,1] - z[0,0,0]
     k1 = np.fft.fftshift( np.linspace(-N1/2,N1/2-1,N1) )
     k2 = np.fft.fftshift( np.linspace(-N2/2,N2/2-1,N2) )
     k3 = np.linspace( 0,N3/2,N3/2+1 )
@@ -185,6 +246,15 @@ class FFTclass:
     self.fft_obj2 = pyfftw.FFTW(self.inval2,self.outval2,axes=(0,1,2,),\
                     direction='FFTW_FORWARD', threads=nthreads)
 
+    self.invalT3 =    pyfftw.n_byte_align_empty((int(3.*N1),int(3.*N2),int(3*N3/2+1)), 16, 'complex128')
+    self.outvalT3 =   pyfftw.n_byte_align_empty((int(3.*N1),int(3.*N2),int(3*N3)), 16, 'float64')
+    self.ifftT_obj3 = pyfftw.FFTW(self.invalT3,self.outvalT3,axes=(0,1,2,),\
+                     direction='FFTW_BACKWARD',threads=nthreads)
+
+    self.inval3 =   pyfftw.n_byte_align_empty((int(3.*N1),int(3.*N2),int(3.*N3) ), 16, 'float64')
+    self.outval3=   pyfftw.n_byte_align_empty((int(3.*N1),int(3.*N2),int(3*N3/2+1)), 16, 'complex128')
+    self.fft_obj3 = pyfftw.FFTW(self.inval3,self.outval3,axes=(0,1,2,),\
+                    direction='FFTW_FORWARD', threads=nthreads)
 
 
 
@@ -220,11 +290,23 @@ class utilitiesClass():
       w = np.fft.irfftn(main.what)*np.sqrt(grid.N1*grid.N2*grid.N3)
       max_vel = np.amax( abs(u)/grid.dx + abs(v)/grid.dy + abs(w)/grid.dz)
       main.dt = main.cfl/(max_vel + 1e-10)
+      #CFL = c * dt / dx  -> dt = CFL*dx/c
       if (main.nu > 0):
         main.dt=np.minimum(main.dt,0.634/(1./grid.dx**2+1./grid.dy**2+1./grid.dz**2)/main.nu*main.cfl/1.35)
     else:
       main.dt = -main.cfl
 
+  def computeEnstrophy(self,main,grid):
+      omega1 = 1j*grid.k2*main.what - 1j*grid.k3*main.vhat
+      omega2 = 1j*grid.k3*main.uhat - 1j*grid.k1*main.what
+      omega3 = 1j*grid.k1*main.vhat - 1j*grid.k2*main.uhat
+      om1E = np.sum(omega1[:,:,1:grid.N3/2]*np.conj(omega1[:,:,1:grid.N3/2]*2) ) + \
+           np.sum(omega1[:,:,0]*np.conj(omega1[:,:,0])) 
+      om2E = np.sum(omega2[:,:,1:grid.N3/2]*np.conj(omega2[:,:,1:grid.N3/2]*2) ) + \
+           np.sum(omega2[:,:,0]*np.conj(omega2[:,:,0])) 
+      om3E = np.sum(omega3[:,:,1:grid.N3/2]*np.conj(omega3[:,:,1:grid.N3/2]*2) ) + \
+           np.sum(omega3[:,:,0]*np.conj(omega3[:,:,0]))
+      return np.real(0.5*(om1E + om2E + om3E)/(grid.N1*grid.N2*grid.N3))
 
   def computeSpectrum(self,main,grid):
       k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten())), return_inverse=True)

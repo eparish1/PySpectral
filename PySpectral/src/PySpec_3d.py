@@ -18,7 +18,12 @@ if 'dt0' in globals():
   pass
 else:
   dt0 = -10
-main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,cfl)
+if 'dt1' in globals():
+  pass
+else:
+  dt1 = -10
+
+main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,dt1,cfl)
 
 # Make Solution Directory if it does not exist
 if not os.path.exists('3DSolution'):
@@ -47,6 +52,9 @@ main.U2Q() #distribute u variables to Q
 iteration = 0 #time step iteration
 Energy = np.zeros(1) #initialize an array for energy
 Energy[0] = utilities.computeEnergy(main,grid)
+Enstrophy = np.zeros(1) #initialize an array for energy
+Enstrophy[0] = utilities.computeEnstrophy(main,grid)
+
 Energy_resolved = np.zeros(1) #initialize an array for resolved energy
 Energy_resolved[0] = utilities.computeEnergy_resolved(main,grid)
 t_hist = np.zeros(1)
@@ -60,6 +68,7 @@ while t <= et:
     savehook(main,grid,utilities,iteration)
   iteration += 1
   Energy = np.append(Energy, utilities.computeEnergy(main,grid) ) #add to the energy array
+  Enstrophy = np.append(Enstrophy, utilities.computeEnstrophy(main,grid) ) #add to the energy array
   Energy_resolved = np.append(Energy_resolved, utilities.computeEnergy_resolved(main,grid) ) #add to the energy array
   t_hist = np.append(t_hist,t)
   #print out stats
@@ -72,5 +81,5 @@ t1 = time.time()
 print('time = ' + str(t1 - t0))
 Dissipation = 1./(t_hist[1::] - t_hist[0:-1])*(Energy[1::] - Energy[0:-1])
 Dissipation_resolved = 1./(t_hist[1::] - t_hist[0:-1])*(Energy_resolved[1::] - Energy_resolved[0:-1])
-np.savez('3DSolution/stats',Energy=Energy,Dissipation=Dissipation,Energy_resolved=Energy_resolved,Dissipation_resolved=Dissipation_resolved,t=np.linspace(0,t+dt,np.size(Energy)))
+np.savez('3DSolution/stats',Energy=Energy,Dissipation=Dissipation,Energy_resolved=Energy_resolved,Dissipation_resolved=Dissipation_resolved,t=t_hist,Enstrophy=Enstrophy)
 
