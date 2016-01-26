@@ -4,31 +4,42 @@ import pyfftw
 import time
 import sys
 from Classes import gridclass, FFTclass, variables,utilitiesClass
+
+
+## Check if variables exist
+#==============================================
+if 'cfl' in globals():			     #|
+  pass					     #|
+else:				             #|
+  cfl = -dt				     #|
+					     #|
+if 'dt0' in globals():                       #|
+  pass					     #|
+else:					     #|
+  dt0 = -10				     #|
+if 'dt1' in globals():  	 	     #|
+  pass                                       #|
+else:                                        #|
+  dt1 = -10                                  #|
+                                             #|
+if 'dt0_subintegrations' in globals():       #|
+  pass                                       #|
+else:                                        #|
+  dt0_subintegrations = -10                  #|
+                                             #|
+if 'dt1_subintegrations' in globals():       #|
+  pass                                       #| 
+else:                                        #| 
+  dt1_subintegrations = -10                  #| 
+#==============================================
+
+# Initialize Classes. 
+#=====================================================================
 utilities = utilitiesClass()
 myFFT = FFTclass(N1,N2,N3,nthreads)
 grid = gridclass(N1,N2,N3,x,y,z,kc)
-
-
-if 'cfl' in globals():
-  pass
-else:
-  cfl = -dt
-
-if 'dt0' in globals():
-  pass
-else:
-  dt0 = -10
-if 'dt1' in globals():
-  pass
-else:
-  dt1 = -10
-
-if 'dt0_subintegrations' in globals():
-  pass
-else:
-  dt0_subintegrations = -10
-
-main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,dt0_subintegrations,dt1,cfl)
+main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,dt0_subintegrations,dt1,dt1_subintegrations,cfl)
+#====================================================================
 
 # Make Solution Directory if it does not exist
 if not os.path.exists('3DSolution'):

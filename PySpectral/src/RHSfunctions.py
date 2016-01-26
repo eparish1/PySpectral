@@ -21,7 +21,9 @@ def computeRHS_NOSGS(main,grid,myFFT):
     uvhat = unpad( myFFT.fft_obj(ureal*vreal),1)
     uwhat = unpad( myFFT.fft_obj(ureal*wreal),1)
     vwhat = unpad( myFFT.fft_obj(vreal*wreal),1)
-
+    #del ureal
+    #del vreal
+    #del wreal
 
     phat  = -grid.k1*grid.k1*grid.ksqr_i*uuhat - grid.k2*grid.k2*grid.ksqr_i*vvhat - \
              grid.k3*grid.k3*grid.ksqr_i*wwhat - 2.*grid.k1*grid.k2*grid.ksqr_i*uvhat - \
@@ -68,12 +70,20 @@ def computeRHS_SMAG(main,grid,myFFT):
     S12hat = 0.5*(1j*grid.k2*main.uhat + 1j*grid.k1*main.vhat)
     S13hat = 0.5*(1j*grid.k3*main.uhat + 1j*grid.k1*main.what)
     S23hat = 0.5*(1j*grid.k3*main.vhat + 1j*grid.k2*main.what)
-    S11real = myFFT.ifftT_obj(pad(S11hat,1))*scale
-    S22real = myFFT.ifftT_obj(pad(S22hat,1))*scale
-    S33real = myFFT.ifftT_obj(pad(S33hat,1))*scale
-    S12real = myFFT.ifftT_obj(pad(S12hat,1))*scale
-    S13real = myFFT.ifftT_obj(pad(S13hat,1))*scale
-    S23real = myFFT.ifftT_obj(pad(S23hat,1))*scale
+
+    S11real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S22real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S33real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S12real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S13real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S23real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+
+    S11real[:,:,:] = myFFT.ifftT_obj(pad(S11hat,1)*scale)
+    S22real[:,:,:] = myFFT.ifftT_obj(pad(S22hat,1)*scale)
+    S33real[:,:,:] = myFFT.ifftT_obj(pad(S33hat,1)*scale)
+    S12real[:,:,:] = myFFT.ifftT_obj(pad(S12hat,1)*scale)
+    S13real[:,:,:] = myFFT.ifftT_obj(pad(S13hat,1)*scale)
+    S23real[:,:,:] = myFFT.ifftT_obj(pad(S23hat,1)*scale)
  
     S_magreal = np.sqrt( 2.*(S11real*S11real + S22real*S22real + S33real*S33real + \
               2.*S12real*S12real + 2.*S13real*S13real + 2.*S23real*S23real ) )
@@ -330,9 +340,9 @@ def computeRHS_FM1(main,grid,myFFT):
 
 
 
-    main.Q[0::main.nvars,0::main.nvars,0::main.nvars] = unpad_2x(PLu,1) + np.sum(main.w0_u,axis=3)
-    main.Q[1::main.nvars,1::main.nvars,1::main.nvars] = unpad_2x(PLv,1) + np.sum(main.w0_v,axis=3)
-    main.Q[2::main.nvars,2::main.nvars,2::main.nvars] = unpad_2x(PLw,1) + np.sum(main.w0_w,axis=3)
+    main.Q[0::main.nvars,0::main.nvars,0::main.nvars] = unpad_2x(PLu,1) + 8.*np.sum(main.w0_u,axis=3)
+    main.Q[1::main.nvars,1::main.nvars,1::main.nvars] = unpad_2x(PLv,1) + 8.*np.sum(main.w0_v,axis=3)
+    main.Q[2::main.nvars,2::main.nvars,2::main.nvars] = unpad_2x(PLw,1) + 8.*np.sum(main.w0_w,axis=3)
 
     sum_u = np.zeros(np.shape(main.uhat),dtype='complex') 
     sum_v = np.zeros(np.shape(main.vhat),dtype='complex') 
@@ -471,29 +481,24 @@ def computeRHS_FM2(main,grid,myFFT):
     PLQLu_p,PLQLu_q = seperateModes(PLQLu,1)
     PLQLv_p,PLQLv_q = seperateModes(PLQLv,1)
     PLQLw_p,PLQLw_q = seperateModes(PLQLw,1)
- 
-#    PLu_real = zeros(np.shape(PLu_qreal)) 
-    PLu_real  = myFFT.ifftT_obj2(PLu[:,:,:]*scale)
-    PLv_real  = myFFT.ifftT_obj2(PLv[:,:,:]*scale)
-    PLw_real  = myFFT.ifftT_obj2(PLw[:,:,:]*scale)
- #   print(np.linalg.norm(PLu),np.linalg.norm(PLQLv),np.linalg.norm(PLQLw))
-
-#
-    ### Now get second order model
-    PLQLu_p,PLQLu_q = seperateModes(PLQLu,1)
-    PLQLv_p,PLQLv_q = seperateModes(PLQLv,1)
-    PLQLw_p,PLQLw_q = seperateModes(PLQLw,1)
 
     ## We need to pad for the convolutions with p \in F U G 
     scale2= np.sqrt( (3.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) ) #2*3/2=3
 
-    PLu_real  = myFFT.ifftT_obj3(pad(PLu[:,:,:],1)*scale2)
-    PLv_real  = myFFT.ifftT_obj3(pad(PLv[:,:,:],1)*scale2)
-    PLw_real  = myFFT.ifftT_obj3(pad(PLw[:,:,:],1)*scale2)
+    PLu_real  = np.zeros((3*grid.N1,3*grid.N2,3*grid.N3))
+    PLv_real  = np.zeros((3*grid.N1,3*grid.N2,3*grid.N3))
+    PLw_real  = np.zeros((3*grid.N1,3*grid.N2,3*grid.N3))
+    PLu_qreal = np.zeros((3*grid.N1,3*grid.N2,3*grid.N1))
+    PLv_qreal = np.zeros((3*grid.N1,3*grid.N2,3*grid.N3))
+    PLw_qreal = np.zeros((3*grid.N1,3*grid.N2,3*grid.N3))
 
-    PLu_qreal = myFFT.ifftT_obj3(pad(PLu_q,1)*scale2)
-    PLv_qreal = myFFT.ifftT_obj3(pad(PLv_q,1)*scale2)
-    PLw_qreal = myFFT.ifftT_obj3(pad(PLw_q,1)*scale2)
+    PLu_real[:,:,:]  = myFFT.ifftT_obj3(pad(PLu[:,:,:],1)*scale2)
+    PLv_real[:,:,:]  = myFFT.ifftT_obj3(pad(PLv[:,:,:],1)*scale2)
+    PLw_real[:,:,:]  = myFFT.ifftT_obj3(pad(PLw[:,:,:],1)*scale2)
+
+    PLu_qreal[:,:,:] = myFFT.ifftT_obj3(pad(PLu_q,1)*scale2)
+    PLv_qreal[:,:,:] = myFFT.ifftT_obj3(pad(PLv_q,1)*scale2)
+    PLw_qreal[:,:,:] = myFFT.ifftT_obj3(pad(PLw_q,1)*scale2)
 
     PLu_PLuq = unpad_2x( unpad( myFFT.fft_obj3(PLu_real*PLu_qreal) , 1 ) , 1)
     PLv_PLuq = unpad_2x( unpad( myFFT.fft_obj3(PLv_real*PLu_qreal) , 1 ) , 1)
@@ -505,9 +510,12 @@ def computeRHS_FM2(main,grid,myFFT):
     PLv_PLwq = unpad_2x( unpad( myFFT.fft_obj3(PLv_real*PLw_qreal) , 1 ) , 1)
     PLw_PLwq = unpad_2x( unpad( myFFT.fft_obj3(PLw_real*PLw_qreal) , 1 ) , 1)
 
-    PLQLu_qreal = myFFT.ifftT_obj2(PLQLu_q*scale)
-    PLQLv_qreal = myFFT.ifftT_obj2(PLQLv_q*scale)
-    PLQLw_qreal = myFFT.ifftT_obj2(PLQLw_q*scale)
+    PLQLu_qreal = np.zeros((2*grid.N1,2*grid.N2,2*grid.N3))
+    PLQLv_qreal = np.zeros((2*grid.N1,2*grid.N2,2*grid.N3))
+    PLQLw_qreal = np.zeros((2*grid.N1,2*grid.N2,2*grid.N3))
+    PLQLu_qreal[:,:,:] = myFFT.ifftT_obj2(PLQLu_q*scale)
+    PLQLv_qreal[:,:,:] = myFFT.ifftT_obj2(PLQLv_q*scale)
+    PLQLw_qreal[:,:,:] = myFFT.ifftT_obj2(PLQLw_q*scale)
 
     PLQLuq_up = unpad_2x( myFFT.fft_obj2(PLQLu_qreal*ureal) , 1)
     PLQLvq_up = unpad_2x( myFFT.fft_obj2(PLQLv_qreal*ureal) , 1)
@@ -548,18 +556,64 @@ def computeRHS_FM2(main,grid,myFFT):
     PLQLw = unpad_2x( PLQLw , 1)
 
 
-    main.Q[0::9,0::9,0::9] = unpad_2x(PLu,1) + main.w0_u
-    main.Q[1::9,1::9,1::9] = unpad_2x(PLv,1) + main.w0_v
-    main.Q[2::9,2::9,2::9] = unpad_2x(PLw,1) + main.w0_w
-    main.Q[3::9,3::9,3::9] = -2./main.dt0*main.w0_u + 2.*PLQLu + main.w1_u  #+main.t*PLQLQLu 
-    main.Q[4::9,4::9,4::9] = -2./main.dt0*main.w0_v + 2.*PLQLv + main.w1_v  #+main.t*PLQLQLv
-    main.Q[5::9,5::9,5::9] = -2./main.dt0*main.w0_w + 2.*PLQLw + main.w1_w  #+main.t*PLQLQLw
-    main.Q[6::9,6::9,6::9] = -2./main.dt1*main.w1_u + 2.*PLQLQLu  
-    main.Q[7::9,7::9,7::9] = -2./main.dt1*main.w1_v + 2.*PLQLQLv 
-    main.Q[8::9,8::9,8::9] = -2./main.dt1*main.w1_w + 2.*PLQLQLw
-#    main.Q[3::9,3::9,3::9] = PLQLu + 0.0001*main.t*PLQLQLu 
-#    main.Q[4::9,4::9,4::9] = PLQLv + 0.0001*main.t*PLQLQLv
-#    main.Q[5::9,5::9,5::9] = PLQLw + 0.0001*main.t*PLQLQLw
+    #main.Q[0::9,0::9,0::9] = unpad_2x(PLu,1) + main.w0_u
+    #main.Q[1::9,1::9,1::9] = unpad_2x(PLv,1) + main.w0_v
+    #main.Q[2::9,2::9,2::9] = unpad_2x(PLw,1) + main.w0_w
+    #main.Q[3::9,3::9,3::9] = -2./main.dt0*main.w0_u + 2.*PLQLu + main.w1_u  #+main.t*PLQLQLu 
+    #main.Q[4::9,4::9,4::9] = -2./main.dt0*main.w0_v + 2.*PLQLv + main.w1_v  #+main.t*PLQLQLv
+    #main.Q[5::9,5::9,5::9] = -2./main.dt0*main.w0_w + 2.*PLQLw + main.w1_w  #+main.t*PLQLQLw
+    #main.Q[6::9,6::9,6::9] = -2./main.dt1*main.w1_u + 2.*PLQLQLu  
+    #main.Q[7::9,7::9,7::9] = -2./main.dt1*main.w1_v + 2.*PLQLQLv 
+    #main.Q[8::9,8::9,8::9] = -2./main.dt1*main.w1_w + 2.*PLQLQLw
+
+    main.Q[0::main.nvars,0::main.nvars,0::main.nvars] = unpad_2x(PLu,1) + 8.*np.sum(main.w0_u,axis=3)
+    main.Q[1::main.nvars,1::main.nvars,1::main.nvars] = unpad_2x(PLv,1) + 8.*np.sum(main.w0_v,axis=3)
+    main.Q[2::main.nvars,2::main.nvars,2::main.nvars] = unpad_2x(PLw,1) + 8.*np.sum(main.w0_w,axis=3)
+
+    ## Add contribution to RHS of FM1 models
+    sum_u = np.zeros(np.shape(main.uhat),dtype='complex') 
+    sum_v = np.zeros(np.shape(main.vhat),dtype='complex') 
+    sum_w = np.zeros(np.shape(main.what),dtype='complex') 
+    term = 3 
+    dt0 = main.dt0/main.dt0_subintegrations
+    for i in range(1,main.dt0_subintegrations+1):
+      for j in range(1,i):
+        sum_u += 4./dt0*(-1.)**(i+j+1)*main.w0_u[:,:,:,j-1]
+        sum_v += 4./dt0*(-1.)**(i+j+1)*main.w0_v[:,:,:,j-1]
+        sum_w += 4./dt0*(-1.)**(i+j+1)*main.w0_w[:,:,:,j-1]
+      main.Q[term+0::main.nvars,term+0::main.nvars,term+0::main.nvars]  = -2./dt0*main.w0_u[:,:,:,i-1] + \
+                                                                       (-1.)**(i+1)*2.*PLQLu + sum_u
+      main.Q[term+1::main.nvars,term+1::main.nvars,term+1::main.nvars]  = -2./dt0*main.w0_v[:,:,:,i-1] + \
+                                                                       (-1.)**(i+1)*2.*PLQLv + sum_v
+      main.Q[term+2::main.nvars,term+2::main.nvars,term+2::main.nvars]  = -2./dt0*main.w0_w[:,:,:,i-1] + \
+                                                                       (-1.)**(i+1)*2.*PLQLw + sum_w
+      ## Increment the array location. Add 6 if there are still FM2 terms, just add 3 if there are not
+      if (i < main.dt1_subintegrations):
+        term += 6
+      else:
+        term += 3
+    ## Add contribution to RHS of FM2 models
+    sum_u = np.zeros(np.shape(main.uhat),dtype='complex') 
+    sum_v = np.zeros(np.shape(main.vhat),dtype='complex') 
+    sum_w = np.zeros(np.shape(main.what),dtype='complex') 
+    term = 6 
+    dt1 = main.dt1/main.dt1_subintegrations
+    for i in range(1,main.dt1_subintegrations+1):
+      for j in range(1,i):
+        sum_u += 4./dt1*(-1.)**(i+j+1)*main.w1_u[:,:,:,j-1]
+        sum_v += 4./dt1*(-1.)**(i+j+1)*main.w1_v[:,:,:,j-1]
+        sum_w += 4./dt1*(-1.)**(i+j+1)*main.w1_w[:,:,:,j-1]
+      main.Q[term+0::main.nvars,term+0::main.nvars,term+0::main.nvars]  = -2./dt1*main.w1_u[:,:,:,i-1] + \
+                                                                       (-1.)**(i+1)*2.*PLQLQLu + sum_u
+      main.Q[term+1::main.nvars,term+1::main.nvars,term+1::main.nvars]  = -2./dt1*main.w1_v[:,:,:,i-1] + \
+                                                                       (-1.)**(i+1)*2.*PLQLQLv + sum_v
+      main.Q[term+2::main.nvars,term+2::main.nvars,term+2::main.nvars]  = -2./dt1*main.w1_w[:,:,:,i-1] + \
+                                                                       (-1.)**(i+1)*2.*PLQLQLw + sum_w
+      ## Increment the array location. Add 6 if there are still FM1 terms, just add 3 if there are not
+      if (i < main.dt0_subintegrations):
+        term += 6
+      else:
+        term += 3
 
 
 
