@@ -340,9 +340,9 @@ def computeRHS_FM1(main,grid,myFFT):
 
 
 
-    main.Q[0::main.nvars,0::main.nvars,0::main.nvars] = unpad_2x(PLu,1) + 8.*np.sum(main.w0_u,axis=3)
-    main.Q[1::main.nvars,1::main.nvars,1::main.nvars] = unpad_2x(PLv,1) + 8.*np.sum(main.w0_v,axis=3)
-    main.Q[2::main.nvars,2::main.nvars,2::main.nvars] = unpad_2x(PLw,1) + 8.*np.sum(main.w0_w,axis=3)
+    main.Q[0::main.nvars,0::main.nvars,0::main.nvars] = unpad_2x(PLu,1) + np.sum(main.w0_u,axis=3)
+    main.Q[1::main.nvars,1::main.nvars,1::main.nvars] = unpad_2x(PLv,1) + np.sum(main.w0_v,axis=3)
+    main.Q[2::main.nvars,2::main.nvars,2::main.nvars] = unpad_2x(PLw,1) + np.sum(main.w0_w,axis=3)
 
     sum_u = np.zeros(np.shape(main.uhat),dtype='complex') 
     sum_v = np.zeros(np.shape(main.vhat),dtype='complex') 
@@ -566,9 +566,9 @@ def computeRHS_FM2(main,grid,myFFT):
     #main.Q[7::9,7::9,7::9] = -2./main.dt1*main.w1_v + 2.*PLQLQLv 
     #main.Q[8::9,8::9,8::9] = -2./main.dt1*main.w1_w + 2.*PLQLQLw
 
-    main.Q[0::main.nvars,0::main.nvars,0::main.nvars] = unpad_2x(PLu,1) + 8.*np.sum(main.w0_u,axis=3)
-    main.Q[1::main.nvars,1::main.nvars,1::main.nvars] = unpad_2x(PLv,1) + 8.*np.sum(main.w0_v,axis=3)
-    main.Q[2::main.nvars,2::main.nvars,2::main.nvars] = unpad_2x(PLw,1) + 8.*np.sum(main.w0_w,axis=3)
+    main.Q[0::main.nvars,0::main.nvars,0::main.nvars] = unpad_2x(PLu,1) + np.sum(main.w0_u,axis=3)
+    main.Q[1::main.nvars,1::main.nvars,1::main.nvars] = unpad_2x(PLv,1) + np.sum(main.w0_v,axis=3)
+    main.Q[2::main.nvars,2::main.nvars,2::main.nvars] = unpad_2x(PLw,1) + np.sum(main.w0_w,axis=3)
 
     ## Add contribution to RHS of FM1 models
     sum_u = np.zeros(np.shape(main.uhat),dtype='complex') 
