@@ -582,11 +582,11 @@ def computeRHS_FM2(main,grid,myFFT):
         sum_v += 4./dt0*(-1.)**(i+j+1)*main.w0_v[:,:,:,j-1]
         sum_w += 4./dt0*(-1.)**(i+j+1)*main.w0_w[:,:,:,j-1]
       main.Q[term+0::main.nvars,term+0::main.nvars,term+0::main.nvars]  = -2./dt0*main.w0_u[:,:,:,i-1] + \
-                                                                       (-1.)**(i+1)*2.*PLQLu + sum_u
+                             (-1.)**(i+1)*2.*PLQLu + sum_u + main.w1_u[:,:,:,i-1]
       main.Q[term+1::main.nvars,term+1::main.nvars,term+1::main.nvars]  = -2./dt0*main.w0_v[:,:,:,i-1] + \
-                                                                       (-1.)**(i+1)*2.*PLQLv + sum_v
+                             (-1.)**(i+1)*2.*PLQLv + sum_v + main.w1_v[:,:,:,i-1]
       main.Q[term+2::main.nvars,term+2::main.nvars,term+2::main.nvars]  = -2./dt0*main.w0_w[:,:,:,i-1] + \
-                                                                       (-1.)**(i+1)*2.*PLQLw + sum_w
+                             (-1.)**(i+1)*2.*PLQLw + sum_w + main.w1_w[:,:,:,i-1]
       ## Increment the array location. Add 6 if there are still FM2 terms, just add 3 if there are not
       if (i < main.dt1_subintegrations):
         term += 6
