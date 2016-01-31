@@ -2,7 +2,7 @@ import numpy as np
 import pyfftw
 from RHSfunctions import *
 class variables:
-  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,\
+  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
                 dt0_subintegrations,dt1,dt1_subintegrations,cfl):
     self.turb_model = turb_model
     self.t = t
@@ -44,6 +44,10 @@ class variables:
       self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
       self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
       self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+
       def U2Q():
         self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
         self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
@@ -60,9 +64,15 @@ class variables:
     ##============ t-model ========================
     if (turb_model == 2):
       print('Using the t-model')
-      self.PLQLu = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
-      self.PLQLv = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
-      self.PLQLw = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      if Ct == -10:
+        print('Did not assign Ct for t-model, using default Ct=0.1')
+        self.Ct = 0.1
+      else:
+        print('Assigning Ct = ' + str(Ct))
+        self.Ct = Ct
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
       self.Q = np.zeros( (3*grid.N1,3*grid.N2,3*(grid.N3/2+1)),dtype='complex')
       self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
       self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
@@ -193,13 +203,9 @@ class variables:
           j += 3
       j = 6
       for i in range(0,self.dt1_subintegrations):
-        print(i,j)
         self.Q[j  ::self.nvars,j  ::self.nvars,j  ::self.nvars] = self.w1_u[:,:,:,i]
-        print(i,j+1)
         self.Q[j+1::self.nvars,j+1::self.nvars,j+1::self.nvars] = self.w1_v[:,:,:,i]
-        print(i,j+2)
         self.Q[j+2::self.nvars,j+2::self.nvars,j+2::self.nvars] = self.w1_w[:,:,:,i]
-        print('Hi')
         if (i < self.dt0_subintegrations-1):
           j += 6
         else:
@@ -311,6 +317,42 @@ class variables:
       self.U2Q = U2Q 
     ##=============================================
 
+    ##============ CM1 model ========================
+    if (turb_model == 6):
+
+      print('Using the First Order Complete Memory Model')
+      self.PLQLu = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.PLQLv = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.PLQLw = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.nvars = 6 
+      self.Q = np.zeros( (self.nvars*grid.N1,self.nvars*grid.N2,self.nvars*(grid.N3/2+1)),dtype='complex')
+      self.Q[0::self.nvars,0::self.nvars,0::self.nvars] = self.uhat[:,:,:]
+      self.Q[1::self.nvars,1::self.nvars,1::self.nvars] = self.vhat[:,:,:]
+      self.Q[2::self.nvars,2::self.nvars,2::self.nvars] = self.what[:,:,:]
+      self.Q[3::self.nvars,3::self.nvars,3::self.nvars] = self.w0_u[:,:,:,0]
+      self.Q[4::self.nvars,4::self.nvars,4::self.nvars] = self.w0_v[:,:,:,0]
+      self.Q[5::self.nvars,5::self.nvars,5::self.nvars] = self.w0_w[:,:,:,0]
+      def U2Q():
+        self.Q[0::self.nvars,0::self.nvars,0::self.nvars] = self.uhat[:,:,:]
+        self.Q[1::self.nvars,1::self.nvars,1::self.nvars] = self.vhat[:,:,:]
+        self.Q[2::self.nvars,2::self.nvars,2::self.nvars] = self.what[:,:,:]
+        self.Q[3::self.nvars,3::self.nvars,3::self.nvars] = self.w0_u[:,:,:,0]
+        self.Q[4::self.nvars,4::self.nvars,4::self.nvars] = self.w0_v[:,:,:,0]
+        self.Q[5::self.nvars,5::self.nvars,5::self.nvars] = self.w0_w[:,:,:,0]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0::self.nvars,0::self.nvars,0::self.nvars]
+        self.vhat[:,:,:] = self.Q[1::self.nvars,1::self.nvars,1::self.nvars]
+        self.what[:,:,:] = self.Q[2::self.nvars,2::self.nvars,2::self.nvars]
+        self.w0_u[:,:,:,0] = self.Q[3::self.nvars,3::self.nvars,3::self.nvars]
+        self.w0_v[:,:,:,0] = self.Q[3::self.nvars,4::self.nvars,4::self.nvars]
+        self.w0_w[:,:,:,0] = self.Q[5::self.nvars,5::self.nvars,5::self.nvars]
+      self.computeRHS = computeRHS_CM1
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+    ##=============================================
 
 
 class gridclass:

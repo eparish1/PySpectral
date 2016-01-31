@@ -12,7 +12,10 @@ if 'cfl' in globals():			     #|
   pass					     #|
 else:				             #|
   cfl = -dt				     #|
-					     #|
+if 'Ct' in globals():                        #|
+  pass					     #|
+else:					     #|
+  Ct = -10				     #|
 if 'dt0' in globals():                       #|
   pass					     #|
 else:					     #|
@@ -38,7 +41,7 @@ else:                                        #|
 utilities = utilitiesClass()
 myFFT = FFTclass(N1,N2,N3,nthreads)
 grid = gridclass(N1,N2,N3,x,y,z,kc)
-main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,dt0,dt0_subintegrations,dt1,dt1_subintegrations,cfl)
+main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,dt0_subintegrations,dt1,dt1_subintegrations,cfl)
 #====================================================================
 
 # Make Solution Directory if it does not exist
