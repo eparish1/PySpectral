@@ -468,6 +468,41 @@ class utilitiesClass():
     else:
       main.dt = -main.cfl
 
+
+  def computeAllStats(self,main,grid):
+      enstrophy = self.computeEnstrophy(main,grid)
+      energy = self.computeEnergy(main,grid)
+      dissipation = 2*enstrophy*main.nu
+      lambda_k = (main.nu**3/dissipation)**0.25
+#      Re_lambda = energy*np.sqrt(20./(3.*main.nu*dissipation))
+      uprime = main.uhat - np.mean(main.uhat)
+      vprime = main.vhat - np.mean(main.vhat)
+      wprime = main.what - np.mean(main.what)
+#      Vprime_RMS = np.mean(np.sqrt(uprime*uprime + vprime*vprime + wprime*wprime))
+#      lam = np.sqrt(15.*main.nu/dissipation)*Vprime_RMS
+      ux = 1j*grid.k1*main.uhat
+      uxreal = np.fft.irfftn(ux)*np.sqrt(grid.N1*grid.N2*grid.N3)
+      ureal = np.fft.irfftn(main.uhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+      vreal = np.fft.irfftn(main.vhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+      wreal = np.fft.irfftn(main.what)*np.sqrt(grid.N1*grid.N2*grid.N3)
+
+
+#      ureal = np.fft.irfftn(main.uhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+#      ureal = np.fft.irfftn(main.uhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+
+      lam = (np.mean(ureal*ureal) / np.mean(uxreal*uxreal) )**0.5
+      Vprime_RMS = np.mean( np.sqrt( (ureal - np.mean(ureal) )**2 + \
+                                     (vreal - np.mean(vreal) )**2 + \
+                                     (wreal - np.mean(wreal) )**2 ) )
+ #     uxruxr = uxreal*uxreal
+ #     ux2hat = np.mean(np.fft.rfftn(uxruxr)/np.sqrt(grid.N1*grid.N2*grid.N3))
+ #     lam = dissipation/(15.*main.nu*ux2hat)
+      #k = 0.5*Vprime_RMS
+      #lam = np.sqrt(10.*main.nu*k/dissipation) 
+      Re_lambda = Vprime_RMS*lam/main.nu#*grid.N1*grid.N2*grid.N3
+      #Re_lambda = energy*np.sqrt(20./(3.*main.nu*dissipation))
+      return enstrophy,energy,dissipation,lambda_k,Re_lambda
+
   def computeEnstrophy(self,main,grid):
       omega1 = 1j*grid.k2*main.what - 1j*grid.k3*main.vhat
       omega2 = 1j*grid.k3*main.uhat - 1j*grid.k1*main.what
@@ -478,20 +513,42 @@ class utilitiesClass():
            np.sum(omega2[:,:,0]*np.conj(omega2[:,:,0])) 
       om3E = np.sum(omega3[:,:,1:grid.N3/2]*np.conj(omega3[:,:,1:grid.N3/2]*2) ) + \
            np.sum(omega3[:,:,0]*np.conj(omega3[:,:,0]))
-      return np.real(0.5*(om1E + om2E + om3E)/(grid.N1*grid.N2*grid.N3))
-
+      enstrophy = np.real(0.5*(om1E + om2E + om3E)/(grid.N1*grid.N2*grid.N3))
+      return enstrophy 
   def computeSpectrum(self,main,grid):
-      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten())), return_inverse=True)
-      k_0, indices2 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,0].flatten())), return_inverse=True)
-      spectrum = np.zeros((np.size(k_m),3),dtype='complex')
-      np.add.at(spectrum[:,0],indices1,2*main.uhat[:,:,1:grid.N3/2].flatten()*np.conj(main.uhat[:,:,1:grid.N3/2].flatten()))
-      np.add.at(spectrum[1::,0],indices2,main.uhat[:,:,0].flatten()*np.conj(main.uhat[:,:,0].flatten()))
-      np.add.at(spectrum[:,1],indices1,2*main.vhat[:,:,1:grid.N3/2].flatten()*np.conj(main.vhat[:,:,1:grid.N3/2].flatten()))
-      np.add.at(spectrum[1::,1],indices2,main.vhat[:,:,0].flatten()*np.conj(main.vhat[:,:,0].flatten()))
-      np.add.at(spectrum[:,2],indices1,2*main.what[:,:,1:grid.N3/2].flatten()*np.conj(main.what[:,:,1:grid.N3/2].flatten()))
-      np.add.at(spectrum[1::,2],indices2,main.what[:,:,0].flatten()*np.conj(main.what[:,:,0].flatten()))
+      k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
+      k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
+#      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,:].flatten())), return_inverse=True)
+      kmax = np.int(np.amax(k_m))
+      kdata = np.linspace(0,kmax,kmax+1)
+      spectrum = np.zeros((kmax+1,3),dtype='complex')
+      spectrum2 = np.zeros((kmax+1,3),dtype='complex')
+      np.add.at( spectrum[:,0],np.int8(k_m[indices1]),2*main.uhat[:,:,1:grid.N3/2].flatten()*np.conj(main.uhat[:,:,1:grid.N3/2].flatten()))
+      np.add.at( spectrum[:,0],np.int8(k_0[indices2]),  main.uhat[:,:,0].flatten()*          np.conj(main.uhat[:,:,0].flatten()))
+      np.add.at( spectrum[:,1],np.int8(k_m[indices1]),2*main.vhat[:,:,1:grid.N3/2].flatten()*np.conj(main.vhat[:,:,1:grid.N3/2].flatten()))
+      np.add.at( spectrum[:,1],np.int8(k_0[indices2]),main.vhat[:,:,0].flatten()*np.conj(main.vhat[:,:,0].flatten()))
+      np.add.at( spectrum[:,2],np.int8(k_m[indices1]),2*main.what[:,:,1:grid.N3/2].flatten()*np.conj(main.what[:,:,1:grid.N3/2].flatten()))
+      np.add.at( spectrum[:,2],np.int8(k_0[indices2]),main.what[:,:,0].flatten()*np.conj(main.what[:,:,0].flatten()))
+      #for i in range(0,grid.N1):
+      #  for j in range(0,grid.N2):
+      #    for k in range(1,grid.N3/2):
+      #      kmag = np.sqrt(grid.k1[i,j,k]**2 + grid.k2[i,j,k]**2 + grid.k3[i,j,k]**2)
+      #      kint = int(np.round(kmag))
+      #      spectrum[kint,0] += 2.*main.uhat[i,j,k]*np.conj(main.uhat[i,j,k])
+      #      spectrum[kint,1] += 2.*main.vhat[i,j,k]*np.conj(main.vhat[i,j,k])
+      #      spectrum[kint,2] += 2.*main.what[i,j,k]*np.conj(main.what[i,j,k])
+      #k = 0
+      #for i in range(0,grid.N1):
+      #    for j in range(0,grid.N2):
+      #      kmag = np.sqrt(grid.k1[i,j,k]**2 + grid.k2[i,j,k]**2 + grid.k3[i,j,k]**2)
+      #      kint = int(np.round(kmag))
+      #      spectrum[kint,0] += main.uhat[i,j,k]*np.conj(main.uhat[i,j,k])
+      #      spectrum[kint,1] += main.vhat[i,j,k]*np.conj(main.vhat[i,j,k])
+      #      spectrum[kint,2] += main.what[i,j,k]*np.conj(main.what[i,j,k])
+
       spectrum = spectrum/(grid.N1*grid.N2*grid.N3)
-      return k_m,spectrum
+     
+      return kdata,spectrum
 
   def computeSpectrum_resolved(self,main,grid):
       k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten())), return_inverse=True)
