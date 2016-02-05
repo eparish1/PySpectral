@@ -21,6 +21,7 @@ def computeRHS_NOSGS(main,grid,myFFT):
     uvhat = unpad( myFFT.fft_obj(ureal*vreal),1)
     uwhat = unpad( myFFT.fft_obj(ureal*wreal),1)
     vwhat = unpad( myFFT.fft_obj(vreal*wreal),1)
+
     #del ureal
     #del vreal
     #del wreal

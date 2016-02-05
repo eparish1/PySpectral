@@ -519,7 +519,7 @@ class utilitiesClass():
       k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
       k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
 #      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,:].flatten())), return_inverse=True)
-      kmax = np.int(np.amax(k_m))
+      kmax = np.int(np.round(np.amax(k_m)))
       kdata = np.linspace(0,kmax,kmax+1)
       spectrum = np.zeros((kmax+1,3),dtype='complex')
       spectrum2 = np.zeros((kmax+1,3),dtype='complex')

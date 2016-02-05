@@ -86,13 +86,18 @@ while t <= et:
   if (iteration%save_freq == 0): #call the savehook routine every save_freq iterations
     savehook(main,grid,utilities,iteration)
   iteration += 1
-  Energy = np.append(Energy, utilities.computeEnergy(main,grid) ) #add to the energy array
-  Enstrophy = np.append(Enstrophy, utilities.computeEnstrophy(main,grid) ) #add to the energy array
+  enstrophy,energy,dissipation,lambda_k,Re_lambda = utilities.computeAllStats(main,grid)
+  Energy = np.append(Energy,energy) #add to the energy array
+  Enstrophy = np.append(Enstrophy,enstrophy) #add to the energy array
   Energy_resolved = np.append(Energy_resolved, utilities.computeEnergy_resolved(main,grid) ) #add to the energy array
   t_hist = np.append(t_hist,t)
   #print out stats
+  sys.stdout.write("===================================================== \n")
   sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(t) + \
-                   "   Energy = " + str(np.real(Energy[-1]))  + "\n")
+                   "   Energy = " + str(np.real(energy)) + " \n")
+  sys.stdout.write("  eps = " + str(np.real(dissipation)) + \
+                   "   Re_lambda = " + str(np.real(Re_lambda))   + "  lam/dx = " + \
+                   str(np.real(lambda_k/grid.dx)) +  "\n")
   sys.stdout.flush()
 
 #=================================================================
