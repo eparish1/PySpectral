@@ -26,9 +26,14 @@ def computeRHS_NOSGS(main,grid,myFFT):
     #del vreal
     #del wreal
 
-    phat  = -grid.k1*grid.k1*grid.ksqr_i*uuhat - grid.k2*grid.k2*grid.ksqr_i*vvhat - \
-             grid.k3*grid.k3*grid.ksqr_i*wwhat - 2.*grid.k1*grid.k2*grid.ksqr_i*uvhat - \
-             2.*grid.k1*grid.k3*grid.ksqr_i*uwhat - 2.*grid.k2*grid.k3*grid.ksqr_i*vwhat
+    phat  = grid.ksqr_i*( -grid.k1*grid.k1*uuhat - grid.k2*grid.k2*vvhat - \
+             grid.k3*grid.k3*wwhat - 2.*grid.k1*grid.k2*uvhat - \
+             2.*grid.k1*grid.k3*uwhat - 2.*grid.k2*grid.k3*vwhat )
+
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
 
     main.Q[0::3,0::3,0::3] = -1j*grid.k1*uuhat - 1j*grid.k2*uvhat - 1j*grid.k3*uwhat - \
                                          1j*grid.k1*phat - main.nu*grid.ksqr*main.uhat
@@ -39,7 +44,10 @@ def computeRHS_NOSGS(main,grid,myFFT):
     main.Q[2::3,2::3,2::3] = -1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
                                          1j*grid.k3*phat - main.nu*grid.ksqr*main.what
 
-
+    if (main.rotate == 1):
+      main.Q[0::3,0::3,0::3] = main.Q[0::3,0::3,0::3] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
+      main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
+      main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
 
 ### For SGS models where the stress can be instantaneously found from current field.
 ## Use this for any EV model

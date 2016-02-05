@@ -2,9 +2,13 @@ import numpy as np
 import pyfftw
 from RHSfunctions import *
 class variables:
-  def __init__(self,turb_model,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
+  def __init__(self,turb_model,rotate,Om1,Om2,Om3,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
                 dt0_subintegrations,dt1,dt1_subintegrations,cfl):
     self.turb_model = turb_model
+    self.rotate = rotate
+    self.Om1 = Om1
+    self.Om2 = Om2
+    self.Om3 = Om3
     self.t = t
     self.kc = np.amax(grid.k1)
     self.dt = dt
@@ -474,34 +478,32 @@ class utilitiesClass():
       energy = self.computeEnergy(main,grid)
       dissipation = 2*enstrophy*main.nu
       lambda_k = (main.nu**3/dissipation)**0.25
+      tau_k = (main.nu/dissipation)**0.5
 #      Re_lambda = energy*np.sqrt(20./(3.*main.nu*dissipation))
-      uprime = main.uhat - np.mean(main.uhat)
-      vprime = main.vhat - np.mean(main.vhat)
-      wprime = main.what - np.mean(main.what)
+#      uprime = main.uhat - np.mean(main.uhat)
+#      vprime = main.vhat - np.mean(main.vhat)
+#      wprime = main.what - np.mean(main.what)
 #      Vprime_RMS = np.mean(np.sqrt(uprime*uprime + vprime*vprime + wprime*wprime))
 #      lam = np.sqrt(15.*main.nu/dissipation)*Vprime_RMS
-      ux = 1j*grid.k1*main.uhat
-      uxreal = np.fft.irfftn(ux)*np.sqrt(grid.N1*grid.N2*grid.N3)
-      ureal = np.fft.irfftn(main.uhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
-      vreal = np.fft.irfftn(main.vhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
-      wreal = np.fft.irfftn(main.what)*np.sqrt(grid.N1*grid.N2*grid.N3)
-
-
+#      ux = 1j*grid.k1*main.uhat
+#      uxreal = np.fft.irfftn(ux)*np.sqrt(grid.N1*grid.N2*grid.N3)
+#      ureal = np.fft.irfftn(main.uhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+#      vreal = np.fft.irfftn(main.vhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
+#      wreal = np.fft.irfftn(main.what)*np.sqrt(grid.N1*grid.N2*grid.N3)
 #      ureal = np.fft.irfftn(main.uhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
 #      ureal = np.fft.irfftn(main.uhat)*np.sqrt(grid.N1*grid.N2*grid.N3)
-
-      lam = (np.mean(ureal*ureal) / np.mean(uxreal*uxreal) )**0.5
-      Vprime_RMS = np.mean( np.sqrt( (ureal - np.mean(ureal) )**2 + \
-                                     (vreal - np.mean(vreal) )**2 + \
-                                     (wreal - np.mean(wreal) )**2 ) )
+#      lam = (np.mean(ureal*ureal) / np.mean(uxreal*uxreal) )**0.5
+#      Vprime_RMS = np.mean( np.sqrt( (ureal - np.mean(ureal) )**2 + \
+#                                     (vreal - np.mean(vreal) )**2 + \
+#                                     (wreal - np.mean(wreal) )**2 ) )
  #     uxruxr = uxreal*uxreal
  #     ux2hat = np.mean(np.fft.rfftn(uxruxr)/np.sqrt(grid.N1*grid.N2*grid.N3))
  #     lam = dissipation/(15.*main.nu*ux2hat)
       #k = 0.5*Vprime_RMS
-      #lam = np.sqrt(10.*main.nu*k/dissipation) 
-      Re_lambda = Vprime_RMS*lam/main.nu#*grid.N1*grid.N2*grid.N3
-      #Re_lambda = energy*np.sqrt(20./(3.*main.nu*dissipation))
-      return enstrophy,energy,dissipation,lambda_k,Re_lambda
+      lam = np.sqrt(10.*main.nu*np.sqrt(grid.ksqr)/dissipation) 
+      #Re_lambda = Vprime_RMS*lam/main.nu#*grid.N1*grid.N2*grid.N3
+      Re_lambda = energy*np.sqrt(20./(3.*main.nu*dissipation))
+      return enstrophy,energy,dissipation,lambda_k,tau_k,Re_lambda
 
   def computeEnstrophy(self,main,grid):
       omega1 = 1j*grid.k2*main.what - 1j*grid.k3*main.vhat

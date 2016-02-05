@@ -8,6 +8,20 @@ from Classes import gridclass, FFTclass, variables,utilitiesClass
 
 ## Check if variables exist
 #==============================================
+if 'rotate' in globals():	             #|
+  if ('Om1' in globals()\
+  and 'Om2' in globals()\
+  and 'Om3' in globals()):
+    pass
+  else:
+   print('Error, rotate is on but not \
+          all Om1,2,3 are defined')	     #|
+else:				             #|
+  rotate = 0                                 #|
+  Om1 = 0                                    #|
+  Om2 = 0                                    #|
+  Om3 = 0                                    #|
+                                             #|
 if 'cfl' in globals():			     #|
   pass					     #|
 else:				             #|
@@ -41,7 +55,8 @@ else:                                        #|
 utilities = utilitiesClass()
 myFFT = FFTclass(N1,N2,N3,nthreads)
 grid = gridclass(N1,N2,N3,x,y,z,kc)
-main = variables(turb_model,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,dt0_subintegrations,dt1,dt1_subintegrations,cfl)
+main = variables(turb_model,rotate,Om1,Om2,Om3,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
+                 dt0_subintegrations,dt1,dt1_subintegrations,cfl)
 #====================================================================
 
 # Make Solution Directory if it does not exist
@@ -86,16 +101,16 @@ while t <= et:
   if (iteration%save_freq == 0): #call the savehook routine every save_freq iterations
     savehook(main,grid,utilities,iteration)
   iteration += 1
-  enstrophy,energy,dissipation,lambda_k,Re_lambda = utilities.computeAllStats(main,grid)
+  enstrophy,energy,dissipation,lambda_k,tau_k,Re_lambda = utilities.computeAllStats(main,grid)
   Energy = np.append(Energy,energy) #add to the energy array
   Enstrophy = np.append(Enstrophy,enstrophy) #add to the energy array
   Energy_resolved = np.append(Energy_resolved, utilities.computeEnergy_resolved(main,grid) ) #add to the energy array
   t_hist = np.append(t_hist,t)
   #print out stats
-  sys.stdout.write("===================================================== \n")
+  sys.stdout.write("===================================================================================== \n")
   sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(t) + \
-                   "   Energy = " + str(np.real(energy)) + " \n")
-  sys.stdout.write("  eps = " + str(np.real(dissipation)) + \
+                   "   Energy = " + str(np.real(energy)) + "  eps = " + str(np.real(dissipation)) + " \n")
+  sys.stdout.write("  tau_k/dt = " + str(np.real(tau_k/main.dt)) + \
                    "   Re_lambda = " + str(np.real(Re_lambda))   + "  lam/dx = " + \
                    str(np.real(lambda_k/grid.dx)) +  "\n")
   sys.stdout.flush()
