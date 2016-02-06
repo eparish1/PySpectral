@@ -403,6 +403,7 @@ class gridclass:
 
 class FFTclass:
   def __init__(self,N1,N2,N3,nthreads):
+    self.nthreads = nthreads
     self.scale = np.sqrt( (3./2.)**3*np.sqrt(N1*N2*N3) ) #scaling for FFTS
     ## Inverse transforms of uhat,vhat,what are of the truncated padded variable. 
     ## Input is complex truncate,output is real untruncated

@@ -40,9 +40,10 @@ def computeRHS_NOSGS_WEAVE(main,grid,myFFT):
     N2 = grid.N2
     N3 = grid.N3
     Zj = 1j
+    nthreads = myFFT.nthreads
     code="""
     int i,j,k;
-    omp_set_num_threads(8);
+    omp_set_num_threads(nthreads);
     #pragma omp parallel for private(i,j,k) shared(uhat,vhat,what,phat,k1,k2,k3,ksqr,ksqr_i,uuhat,vvhat,wwhat,uvhat,uwhat,vwhat,Q,nu)
     for(i=0;i<N1;i++){
       for (j=0;j<N2;j++){
@@ -63,7 +64,7 @@ def computeRHS_NOSGS_WEAVE(main,grid,myFFT):
       }
     }
     """
-    weave.inline(code,['N1','N2','N3','uhat','vhat','what','phat','k1','k2','k3','ksqr','ksqr_i','uuhat','vvhat','wwhat','uvhat','uwhat','vwhat','Q','nu','Zj'],\
+    weave.inline(code,['N1','N2','N3','uhat','vhat','what','phat','k1','k2','k3','ksqr','ksqr_i','uuhat','vvhat','wwhat','uvhat','uwhat','vwhat','Q','nu','Zj','nthreads'],\
                  type_converters=converters.blitz,compiler='gcc',extra_compile_args=\
                  ['-march=native -O3 -fopenmp'],
                  support_code = \
