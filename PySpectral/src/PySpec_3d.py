@@ -8,6 +8,10 @@ from Classes import gridclass, FFTclass, variables,utilitiesClass
 
 ## Check if variables exist
 #==============================================
+if 'weave' in globals():	             #|
+  pass					     #|
+else:				             #|
+  weave = 0				     #|
 if 'rotate' in globals():	             #|
   if ('Om1' in globals()\
   and 'Om2' in globals()\
@@ -55,7 +59,7 @@ else:                                        #|
 utilities = utilitiesClass()
 myFFT = FFTclass(N1,N2,N3,nthreads)
 grid = gridclass(N1,N2,N3,x,y,z,kc)
-main = variables(turb_model,rotate,Om1,Om2,Om3,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
+main = variables(weave,turb_model,rotate,Om1,Om2,Om3,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
                  dt0_subintegrations,dt1,dt1_subintegrations,cfl)
 #====================================================================
 
@@ -77,7 +81,7 @@ def advanceQ_RK4(main,grid,myFFT,utilities):
   utilities.compute_dt(main,grid)
   for i in range(0,4):
     main.computeRHS(main,grid,myFFT)
-    main.Q[:,:,:] = Q0[:,:,:] + main.dt*rk4const[i]*main.Q[:,:,:]
+    main.Q = Q0 + main.dt*rk4const[i]*main.Q
 
 
 t0 = time.time() #start the timer

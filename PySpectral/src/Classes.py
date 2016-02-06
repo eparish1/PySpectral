@@ -1,8 +1,10 @@
 import numpy as np
 import pyfftw
 from RHSfunctions import *
+from RHSfunctionsWEAVE import *
+
 class variables:
-  def __init__(self,turb_model,rotate,Om1,Om2,Om3,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
+  def __init__(self,weave,turb_model,rotate,Om1,Om2,Om3,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
                 dt0_subintegrations,dt1,dt1_subintegrations,cfl):
     self.turb_model = turb_model
     self.rotate = rotate
@@ -36,7 +38,10 @@ class variables:
         self.uhat[:,:,:] = self.Q[0::3,0::3,0::3]
         self.vhat[:,:,:] = self.Q[1::3,1::3,1::3]
         self.what[:,:,:] = self.Q[2::3,2::3,2::3]
-      self.computeRHS = computeRHS_NOSGS
+      if (weave == 0):
+        self.computeRHS = computeRHS_NOSGS
+      else:
+        self.computeRHS = computeRHS_NOSGS_WEAVE
       self.Q2U = Q2U
       self.U2Q = U2Q 
     ##=============================================
