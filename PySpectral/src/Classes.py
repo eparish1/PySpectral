@@ -27,6 +27,7 @@ class variables:
     if (turb_model == 0):
       print('Not using any SGS')
       self.Q = np.zeros( (3*grid.N1,3*grid.N2,3*(grid.N3/2+1)),dtype='complex')
+      self.nvars = 3
       self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
       self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
       self.Q[2::3,2::3,2::3] = self.what[:,:,:]
@@ -362,6 +363,32 @@ class variables:
       self.Q2U = Q2U
       self.U2Q = U2Q 
     ##=============================================
+    ##============ DNS Budgets ========================
+    if (turb_model == 99):
+      print('Running with no SGS and computing budgets')
+      self.nvars = 3
+      self.PLu = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.PLv = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.PLw = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.PLQLu = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.PLQLv = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.PLQLw = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.Q = np.zeros( (3*grid.N1,3*grid.N2,3*(grid.N3/2+1)),dtype='complex')
+      self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+      self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+      self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      def U2Q():
+        self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+        self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+        self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0::3,0::3,0::3]
+        self.vhat[:,:,:] = self.Q[1::3,1::3,1::3]
+        self.what[:,:,:] = self.Q[2::3,2::3,2::3]
+      self.computeRHS = computeRHS_BUDGETS
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+    ##=============================================
 
 
 class gridclass:
@@ -443,6 +470,24 @@ class FFTclass:
 
 
 class utilitiesClass():
+  def preAdvanceQ_hook(self,main,grid,myFFT):
+    if (main.iteration%20 == 0):
+      main.u0 = np.zeros(np.shape(main.uhat),dtype='complex')
+      main.u0[:,:,:] = main.uhat[:,:,:]
+      main.w0_u0,main.w0_v0,main.w0_w0 = self.computeSGS_DNS(main,grid,myFFT)
+    else:
+      pass
+  def postAdvanceQ_hook(self,main,grid,myFFT):
+    if (main.iteration%20 == 0):
+      w0_u,w0_v,w0_w = self.computeSGS_DNS(main,grid,myFFT)
+      string = '3DSolution/budget' + str(main.iteration)
+      np.savez_compressed(string,w0_udot = (w0_u-main.w0_u0)/main.dt,\
+                               w0_vdot = (w0_v-main.w0_v0)/main.dt,\
+                               w0_wdot = (w0_w-main.w0_w0)/main.dt,\
+                               u_dot = (main.uhat - main.u0)/main.dt,\
+             PLQLu=main.PLQLu,PLQLv=main.PLQLv,PLQLw=main.PLQLw,PLu = main.PLu)
+    else:
+      pass 
   def computeEnergy(self,main,grid):
       uE = np.sum(main.uhat[:,:,1:grid.N3/2]*np.conj(main.uhat[:,:,1:grid.N3/2]*2) ) + \
            np.sum(main.uhat[:,:,0]*np.conj(main.uhat[:,:,0])) 
@@ -573,3 +618,72 @@ class utilitiesClass():
       np.add.at(spectrum[1::,2],indices2,wFilt[:,:,0].flatten()*np.conj(wFilt[:,:,0].flatten()))
       spectrum = spectrum/(grid.N1*grid.N2*grid.N3)
       return k_m,spectrum 
+
+  def computeSGS_DNS(self,main,grid,myFFT):
+    N1,N2,N3 = np.shape(main.uhat)
+    N3 = (N3-1)*2
+    Gf = np.zeros(np.shape(main.uhat)) #Sharp Spectral cutoff (we cutoff the oddball frequency)
+    Gf[0:main.kc,0:main.kc,0:main.kc] = 1 # get first quardants
+    Gf[0:main.kc,N2-main.kc+1::,0:main.kc] = 1 #0:kc in k1 and -kc:0 in k2
+    Gf[N1-main.kc+1::,0:main.kc,0:main.kc] = 1 #-kc:0 in k1 and 0:kc in k2
+    Gf[N1-main.kc+1::,N2-main.kc+1::,0:main.kc] = 1 #-kc:0 in k1 and k2
+
+    ufilt = Gf*main.uhat
+    vfilt = Gf*main.vhat
+    wfilt = Gf*main.what
+    scale = np.sqrt( (3./2.)**3*np.sqrt(N1*N2*N3) )
+
+    ureal = np.zeros((N1*3/2,N2*3/2,N3*3/2))
+    vreal = np.zeros((N1*3/2,N2*3/2,N3*3/2))
+    wreal = np.zeros((N1*3/2,N2*3/2,N3*3/2))
+    ureal_filt = np.zeros((N1*3/2,N2*3/2,N3*3/2))
+    vreal_filt = np.zeros((N1*3/2,N2*3/2,N3*3/2))
+    wreal_filt = np.zeros((N1*3/2,N2*3/2,N3*3/2))
+    uuhat = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    vvhat = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    wwhat = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    uvhat = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    uwhat = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    vwhat = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    uuhat_filt = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    vvhat_filt = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    wwhat_filt = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    uvhat_filt = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    uwhat_filt = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+    vwhat_filt = np.zeros((N1,N2,(N3/2+1)),dtype='complex')
+
+    ureal[:,:,:] = myFFT.ifftT_obj(pad(main.uhat,1)*scale)
+    vreal[:,:,:] = myFFT.ifftT_obj(pad(main.vhat,1)*scale)
+    wreal[:,:,:]  = myFFT.ifftT_obj(pad(main.what,1)*scale)
+    ureal_filt[:,:,:] = myFFT.ifftT_obj(pad(ufilt,1)*scale)
+    vreal_filt[:,:,:] = myFFT.ifftT_obj(pad(vfilt,1)*scale)
+    wreal_filt[:,:,:] = myFFT.ifftT_obj(pad(wfilt,1)*scale)
+ 
+    uuhat[:,:,:] = unpad( myFFT.fft_obj(ureal*ureal),1)
+    vvhat[:,:,:] = unpad( myFFT.fft_obj(vreal*vreal),1)
+    wwhat[:,:,:] = unpad( myFFT.fft_obj(wreal*wreal),1)
+    uvhat[:,:,:] = unpad( myFFT.fft_obj(ureal*vreal),1)
+    uwhat[:,:,:] = unpad( myFFT.fft_obj(ureal*wreal),1)
+    vwhat[:,:,:] = unpad( myFFT.fft_obj(vreal*wreal),1)
+    uuhat_filt[:,:,:] = unpad( myFFT.fft_obj(ureal_filt*ureal_filt),1)
+    vvhat_filt[:,:,:] = unpad( myFFT.fft_obj(vreal_filt*vreal_filt),1)
+    wwhat_filt[:,:,:] = unpad( myFFT.fft_obj(wreal_filt*wreal_filt),1)
+    uvhat_filt[:,:,:] = unpad( myFFT.fft_obj(ureal_filt*vreal_filt),1)
+    uwhat_filt[:,:,:] = unpad( myFFT.fft_obj(ureal_filt*wreal_filt),1)
+    vwhat_filt[:,:,:] = unpad( myFFT.fft_obj(vreal_filt*wreal_filt),1)
+  
+    ## Compute SGS tensor. 
+    # tau_ij = [d/dx 
+    tauhat = np.zeros((N1,N2,(N3/2+1),6),dtype='complex')
+    tauhat[:,:,:,0] = Gf*uuhat - uuhat_filt
+    tauhat[:,:,:,1] = Gf*vvhat - vvhat_filt
+    tauhat[:,:,:,2] = Gf*wwhat - wwhat_filt
+    tauhat[:,:,:,3] = Gf*uvhat - uvhat_filt
+    tauhat[:,:,:,4] = Gf*uwhat - uwhat_filt
+    tauhat[:,:,:,5] = Gf*vwhat - vwhat_filt
+  
+    w0_u = -(1j*grid.k1*tauhat[:,:,:,0] + 1j*grid.k2*tauhat[:,:,:,3] + 1j*grid.k3*tauhat[:,:,:,4])
+    w0_v = -(1j*grid.k1*tauhat[:,:,:,3] + 1j*grid.k2*tauhat[:,:,:,1] + 1j*grid.k3*tauhat[:,:,:,5])
+    w0_w = -(1j*grid.k1*tauhat[:,:,:,4] + 1j*grid.k2*tauhat[:,:,:,5] + 1j*grid.k3*tauhat[:,:,:,2])
+    return w0_u,w0_v,w0_w
+  

@@ -78,11 +78,12 @@ def advanceQ_RK4(main,grid,myFFT,utilities):
   Q0 = np.zeros(np.shape(main.Q),dtype='complex')
   Q0[:,:,:] = main.Q[:,:,:]
   rk4const = np.array([1./4,1./3,1./2,1.])
+  utilities.preAdvanceQ_hook(main,grid,myFFT) #pass by default. 
   utilities.compute_dt(main,grid)
   for i in range(0,4):
     main.computeRHS(main,grid,myFFT)
     main.Q = Q0 + main.dt*rk4const[i]*main.Q
-
+  utilities.postAdvanceQ_hook(main,grid,myFFT)
 
 t0 = time.time() #start the timer
 main.U2Q() #distribute u variables to Q
@@ -100,6 +101,7 @@ t_hist[0] = 0
 #========== MAIN TIME INTEGRATION LOOP =======================
 while t <= et:
   main.t = t 
+  main.iteration = iteration
   advanceQ_RK4(main,grid,myFFT,utilities) 
   t += main.dt
   if (iteration%save_freq == 0): #call the savehook routine every save_freq iterations
