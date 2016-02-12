@@ -471,14 +471,14 @@ class FFTclass:
 
 class utilitiesClass():
   def preAdvanceQ_hook(self,main,grid,myFFT):
-    if (main.iteration%20 == 0):
+    if (main.iteration%20 == 0 and main.turb_model == 99):
       main.u0 = np.zeros(np.shape(main.uhat),dtype='complex')
       main.u0[:,:,:] = main.uhat[:,:,:]
       main.w0_u0,main.w0_v0,main.w0_w0 = self.computeSGS_DNS(main,grid,myFFT)
     else:
       pass
   def postAdvanceQ_hook(self,main,grid,myFFT):
-    if (main.iteration%20 == 0):
+    if (main.iteration%20 == 0 and main.turb_model == 99):
       w0_u,w0_v,w0_w = self.computeSGS_DNS(main,grid,myFFT)
       string = '3DSolution/budget' + str(main.iteration)
       np.savez_compressed(string,w0_udot = (w0_u-main.w0_u0)/main.dt,\
