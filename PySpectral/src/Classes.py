@@ -42,6 +42,7 @@ class variables:
       if (weave == 0):
         self.computeRHS = computeRHS_NOSGS
       else:
+        print('Using WEAVE for inline C++')
         self.computeRHS = computeRHS_NOSGS_WEAVE
       self.Q2U = Q2U
       self.U2Q = U2Q 
