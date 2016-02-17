@@ -113,9 +113,16 @@ def computeRHS_SMAG(main,grid,myFFT):
     tauhat[:,:,:,4] = unpad( myFFT.fft_obj( -2.*nutreal*S13real ),1)  #13
     tauhat[:,:,:,5] = unpad( myFFT.fft_obj( -2.*nutreal*S23real ),1)  #23
 
-    main.w0_u[:,:,:,0] = -1j*grid.k1*tauhat[:,:,:,0] - 1j*grid.k2*tauhat[:,:,:,3] - 1j*grid.k3*tauhat[:,:,:,4]
-    main.w0_v[:,:,:,0] = -1j*grid.k1*tauhat[:,:,:,3] - 1j*grid.k2*tauhat[:,:,:,1] - 1j*grid.k3*tauhat[:,:,:,5]
-    main.w0_w[:,:,:,0] = -1j*grid.k1*tauhat[:,:,:,4] - 1j*grid.k2*tauhat[:,:,:,5] - 1j*grid.k3*tauhat[:,:,:,2]
+    ## contribution of projection to RHS sgs (k_m k_j)/k^2 \tau_{jm}
+    tau_projection  = 1j*grid.ksqr_i*( grid.k1*grid.k1*tauhat[:,:,:,0] + grid.k2*grid.k2*tauhat[:,:,:,1] + \
+             grid.k3*grid.k3*tauhat[:,:,:,2] + 2.*grid.k1*grid.k2*tauhat[:,:,:,3] + \
+             2.*grid.k1*grid.k3*tauhat[:,:,:,4] + 2.*grid.k2*grid.k3*tauhat[:,:,:,5] )
+
+    #Now SGS contributions. w = -\delta_{im}\tau_{jm}  + k_i k_m / k^2 i k_j \tau_{jm}
+    main.w0_u[:,:,:,0] = -1j*grid.k1*tauhat[:,:,:,0] - 1j*grid.k2*tauhat[:,:,:,3] - 1j*grid.k3*tauhat[:,:,:,4] + 1j*grid.k1*tau_projection
+    main.w0_v[:,:,:,0] = -1j*grid.k1*tauhat[:,:,:,3] - 1j*grid.k2*tauhat[:,:,:,1] - 1j*grid.k3*tauhat[:,:,:,5] + 1j*grid.k2*tau_projection
+    main.w0_w[:,:,:,0] = -1j*grid.k1*tauhat[:,:,:,4] - 1j*grid.k2*tauhat[:,:,:,5] - 1j*grid.k3*tauhat[:,:,:,2] + 1j*grid.k3*tau_projection
+
     main.Q[0::3,0::3,0::3] = -1j*grid.k1*uuhat - 1j*grid.k2*uvhat - 1j*grid.k3*uwhat - \
                            1j*grid.k1*phat - main.nu*grid.ksqr*main.uhat + main.w0_u[:,:,:,0]
 
@@ -159,11 +166,9 @@ def computeRHS_tmodel(main,grid,myFFT):
     uhat_pad = pad_2x(main.uhat,1)
     vhat_pad = pad_2x(main.vhat,1)
     what_pad = pad_2x(main.what,1)
-#    print(np.linalg.norm(uhat_pad),np.linalg.norm(vhat_pad),np.linalg.norm(what_pad))
     ureal[:,:,:] = myFFT.ifftT_obj2(uhat_pad*scale)
     vreal[:,:,:] = myFFT.ifftT_obj2(vhat_pad*scale)
     wreal[:,:,:] = myFFT.ifftT_obj2(what_pad*scale)
-#    print(np.linalg.norm(uhat_pad),np.linalg.norm(vhat_pad),np.linalg.norm(what_pad))
 
     uuhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
     vvhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
