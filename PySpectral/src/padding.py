@@ -53,7 +53,6 @@ def seperateModes(uhat_pad,arrange):
   N1 = np.shape(uhat_pad)[0]/2
   N2 = np.shape(uhat_pad)[1]/2
   N3 = (np.shape(uhat_pad)[2] + 1)/2
-  print(N1,N2,N3)
   u_p = np.zeros((2*N1,2*N2,2*N3-1),dtype = 'complex')
   u_q = np.zeros((2*N1,2*N2,2*N3-1),dtype = 'complex')
   # the modes in q should include the oddball
