@@ -893,7 +893,7 @@ class utilitiesClass():
 
 
 
-  def compute_PLQLu(main,grid,myFFT,utilities):
+  def compute_PLQLu(self,main,grid,myFFT):
     ## in the t-model, do 2x padding because we want to have convolutions where 
     ## the modes in G support twice the modes in F.
     scale = np.sqrt( (2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
