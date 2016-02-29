@@ -712,11 +712,11 @@ class utilitiesClass():
     tauhat[:,:,:,4] = Gf*uwhat - uwhat_filt
     tauhat[:,:,:,5] = Gf*vwhat - vwhat_filt
   
-    w0_u = -(1j*grid.k1*tauhat[:,:,:,0] + 1j*grid.k2*tauhat[:,:,:,3] + 1j*grid.k3*tauhat[:,:,:,4])
-    w0_v = -(1j*grid.k1*tauhat[:,:,:,3] + 1j*grid.k2*tauhat[:,:,:,1] + 1j*grid.k3*tauhat[:,:,:,5])
-    w0_w = -(1j*grid.k1*tauhat[:,:,:,4] + 1j*grid.k2*tauhat[:,:,:,5] + 1j*grid.k3*tauhat[:,:,:,2])
-    return w0_u,w0_v,w0_w
- 
+    #w0_u = -(1j*grid.k1*tauhat[:,:,:,0] + 1j*grid.k2*tauhat[:,:,:,3] + 1j*grid.k3*tauhat[:,:,:,4])
+    #w0_v = -(1j*grid.k1*tauhat[:,:,:,3] + 1j*grid.k2*tauhat[:,:,:,1] + 1j*grid.k3*tauhat[:,:,:,5])
+    #w0_w = -(1j*grid.k1*tauhat[:,:,:,4] + 1j*grid.k2*tauhat[:,:,:,5] + 1j*grid.k3*tauhat[:,:,:,2])
+    #return w0_u,w0_v,w0_w
+    return tauhat 
   def computeTransfer(self,main,grid,myFFT):
     scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
     ureal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
