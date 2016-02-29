@@ -81,7 +81,7 @@ def advanceQ_RK4(main,grid,myFFT,utilities):
   utilities.preAdvanceQ_hook(main,grid,myFFT) #pass by default. 
   utilities.compute_dt(main,grid)
   for i in range(0,4):
-    main.computeRHS(main,grid,myFFT)
+    main.computeRHS(main,grid,myFFT,utilities)
     main.Q = Q0 + main.dt*rk4const[i]*main.Q
   utilities.postAdvanceQ_hook(main,grid,myFFT)
 
@@ -105,7 +105,7 @@ while t <= et:
   advanceQ_RK4(main,grid,myFFT,utilities) 
   t += main.dt
   if (iteration%save_freq == 0): #call the savehook routine every save_freq iterations
-    savehook(main,grid,utilities,iteration)
+    savehook(main,grid,utilities,iteration,myFFT)
   iteration += 1
   enstrophy,energy,dissipation,lambda_k,tau_k,Re_lambda = utilities.computeAllStats(main,grid)
   Energy = np.append(Energy,energy) #add to the energy array

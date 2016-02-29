@@ -364,6 +364,31 @@ class variables:
       self.Q2U = Q2U
       self.U2Q = U2Q 
     ##=============================================
+    ##============ Dynamic Smag========================
+    if (turb_model == 7):
+      print('Using Dynamic Smagorinsky SGS')
+      self.Q = np.zeros( (3*grid.N1,3*grid.N2,3*(grid.N3/2+1)),dtype='complex')
+      self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+      self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+      self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+
+      def U2Q():
+        self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+        self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+        self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0::3,0::3,0::3]
+        self.vhat[:,:,:] = self.Q[1::3,1::3,1::3]
+        self.what[:,:,:] = self.Q[2::3,2::3,2::3]
+      self.computeRHS = computeRHS_DSMAG
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+    ##=============================================
+
+
     ##============ DNS Budgets ========================
     if (turb_model == 99):
       print('Running with no SGS and computing budgets')
@@ -605,18 +630,22 @@ class utilitiesClass():
       return kdata,spectrum
 
   def computeSpectrum_resolved(self,main,grid):
-      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten())), return_inverse=True)
-      k_0, indices2 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,0].flatten())), return_inverse=True)
+      k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
+      k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
+#      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,:].flatten())), return_inverse=True)
+      kmax = np.int(np.round(np.amax(k_m)))
+      kdata = np.linspace(0,kmax,kmax+1)
+      spectrum = np.zeros((kmax+1,3),dtype='complex')
+      spectrum2 = np.zeros((kmax+1,3),dtype='complex')
       uFilt = grid.Gf*main.uhat
       vFilt = grid.Gf*main.vhat
       wFilt = grid.Gf*main.what
-      spectrum = np.zeros((np.size(k_m),3),dtype='complex')
-      np.add.at(spectrum[:,0],indices1,2*uFilt[:,:,1:grid.N3/2].flatten()*np.conj(uFilt[:,:,1:grid.N3/2].flatten()))
-      np.add.at(spectrum[1::,0],indices2,uFilt[:,:,0].flatten()*np.conj(uFilt[:,:,0].flatten()))
-      np.add.at(spectrum[:,1],indices1,2*vFilt[:,:,1:grid.N3/2].flatten()*np.conj(vFilt[:,:,1:grid.N3/2].flatten()))
-      np.add.at(spectrum[1::,1],indices2,vFilt[:,:,0].flatten()*np.conj(vFilt[:,:,0].flatten()))
-      np.add.at(spectrum[:,2],indices1,2*wFilt[:,:,1:grid.N3/2].flatten()*np.conj(wFilt[:,:,1:grid.N3/2].flatten()))
-      np.add.at(spectrum[1::,2],indices2,wFilt[:,:,0].flatten()*np.conj(wFilt[:,:,0].flatten()))
+      np.add.at( spectrum[:,0],np.int8(k_m[indices1]),2*uFilt[:,:,1:grid.N3/2].flatten()*np.conj(uFilt[:,:,1:grid.N3/2].flatten()))
+      np.add.at( spectrum[:,0],np.int8(k_0[indices2]),  uFilt[:,:,0].flatten()*          np.conj(uFilt[:,:,0].flatten()))
+      np.add.at( spectrum[:,1],np.int8(k_m[indices1]),2*vFilt[:,:,1:grid.N3/2].flatten()*np.conj(vFilt[:,:,1:grid.N3/2].flatten()))
+      np.add.at( spectrum[:,1],np.int8(k_0[indices2]),  vFilt[:,:,0].flatten()*          np.conj(vFilt[:,:,0].flatten()))
+      np.add.at( spectrum[:,2],np.int8(k_m[indices1]),2*wFilt[:,:,1:grid.N3/2].flatten()*np.conj(wFilt[:,:,1:grid.N3/2].flatten()))
+      np.add.at( spectrum[:,2],np.int8(k_0[indices2]),wFilt[:,:,0].flatten()*np.conj(wFilt[:,:,0].flatten()))
       spectrum = spectrum/(grid.N1*grid.N2*grid.N3)
       return k_m,spectrum 
 
@@ -738,9 +767,65 @@ class utilitiesClass():
     np.add.at( spectrum[:,1],np.int8(k_0[indices2]),  RHSv[:,:,0].flatten())
     np.add.at( spectrum[:,2],np.int8(k_m[indices1]),2*RHSw[:,:,1:grid.N3/2].flatten())
     np.add.at( spectrum[:,2],np.int8(k_0[indices2]),  RHSw[:,:,0].flatten())
-    Transfer = (spectrum[:,0] + spectrum[:,1] + spectrum[:,2] ) / np.sqrt(grid.N1*grid.N2*grid.N3)
-    return Transfer 
+    Transfer = (spectrum[:,0] + spectrum[:,1] + spectrum[:,2] ) / (grid.N1*grid.N2*grid.N3)
+    return kdata,Transfer 
 
+  def computeTransfer_resolved(self,main,grid,myFFT):
+    scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
+    ureal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    vreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    wreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    
+    uFilt = grid.Gf*main.uhat
+    vFilt = grid.Gf*main.vhat
+    wFilt = grid.Gf*main.what
+
+    uFilt = unpad(pad(uFilt,1),1)
+    vFilt = unpad(pad(vFilt,1),1)
+    wFilt = unpad(pad(wFilt,1),1)
+
+    ureal[:,:,:] = myFFT.ifftT_obj(pad(uFilt,1))*scale
+    vreal[:,:,:] = myFFT.ifftT_obj(pad(vFilt,1))*scale
+    wreal[:,:,:] = myFFT.ifftT_obj(pad(wFilt,1))*scale
+
+    uuhat = unpad( myFFT.fft_obj(ureal*ureal),1)
+    vvhat = unpad( myFFT.fft_obj(vreal*vreal),1)
+    wwhat = unpad( myFFT.fft_obj(wreal*wreal),1)
+    uvhat = unpad( myFFT.fft_obj(ureal*vreal),1)
+    uwhat = unpad( myFFT.fft_obj(ureal*wreal),1)
+    vwhat = unpad( myFFT.fft_obj(vreal*wreal),1)
+
+    phat  = grid.ksqr_i*( -grid.k1*grid.k1*uuhat - grid.k2*grid.k2*vvhat - \
+           grid.k3*grid.k3*wwhat - 2.*grid.k1*grid.k2*uvhat - \
+           2.*grid.k1*grid.k3*uwhat - 2.*grid.k2*grid.k3*vwhat )
+
+    RHSu = np.zeros((grid.N1,grid.N2,grid.N3/2+1),dtype='complex')
+    RHSv = np.zeros((grid.N1,grid.N2,grid.N3/2+1),dtype='complex')
+    RHSw = np.zeros((grid.N1,grid.N2,grid.N3/2+1),dtype='complex')
+
+
+    RHSu[:,:,:] = np.conj(uFilt)*(-1j*grid.k1*uuhat - 1j*grid.k2*uvhat - 1j*grid.k3*uwhat - \
+                                       1j*grid.k1*phat )
+
+    RHSv[:,:,:] = np.conj(vFilt)*(-1j*grid.k1*uvhat - 1j*grid.k2*vvhat - 1j*grid.k3*vwhat - \
+                                       1j*grid.k2*phat)
+
+    RHSw[:,:,:] = np.conj(wFilt)*(-1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
+                                      1j*grid.k3*phat)
+    k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
+    k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
+    kmax = np.int(np.round(np.amax(k_m)))
+    kdata = np.linspace(0,kmax,kmax+1)
+    spectrum = np.zeros((kmax+1,3),dtype='complex')
+    spectrum2 = np.zeros((kmax+1,3),dtype='complex')
+    np.add.at( spectrum[:,0],np.int8(k_m[indices1]),2*RHSu[:,:,1:grid.N3/2].flatten())
+    np.add.at( spectrum[:,0],np.int8(k_0[indices2]),  RHSu[:,:,0].flatten())
+    np.add.at( spectrum[:,1],np.int8(k_m[indices1]),2*RHSv[:,:,1:grid.N3/2].flatten())
+    np.add.at( spectrum[:,1],np.int8(k_0[indices2]),  RHSv[:,:,0].flatten())
+    np.add.at( spectrum[:,2],np.int8(k_m[indices1]),2*RHSw[:,:,1:grid.N3/2].flatten())
+    np.add.at( spectrum[:,2],np.int8(k_0[indices2]),  RHSw[:,:,0].flatten())
+    Transfer = (spectrum[:,0] + spectrum[:,1] + spectrum[:,2] ) / (grid.N1*grid.N2*grid.N3)
+    return kdata,Transfer 
 
   def computeTransfer_SGS(self,main,grid,myFFT):
     scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
@@ -773,24 +858,34 @@ class utilitiesClass():
 
 
     RHSu[:,:,:] = np.conj(main.uhat)*(-1j*grid.k1*uuhat - 1j*grid.k2*uvhat - 1j*grid.k3*uwhat - \
-                                       1j*grid.k1*phat ) + main.w0u[:,:,:,0]
+                                       1j*grid.k1*phat  + main.w0_u[:,:,:,0] )
 
     RHSv[:,:,:] = np.conj(main.vhat)*(-1j*grid.k1*uvhat - 1j*grid.k2*vvhat - 1j*grid.k3*vwhat - \
-                                       1j*grid.k2*phat) + main.w0v[:,:,:,0]
+                                       1j*grid.k2*phat  + main.w0_v[:,:,:,0] )
 
     RHSw[:,:,:] = np.conj(main.what)*(-1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
-                                      1j*grid.k3*phat) + main.w0_w[:,:,:0]
+                                      1j*grid.k3*phat + main.w0_w[:,:,:,0] )
     k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
     k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
     kmax = np.int(np.round(np.amax(k_m)))
     kdata = np.linspace(0,kmax,kmax+1)
     spectrum = np.zeros((kmax+1,3),dtype='complex')
     spectrum2 = np.zeros((kmax+1,3),dtype='complex')
-    np.add.at( spectrum[:,0],np.int8(k_m[indices1]),2*RHSu[:,:,1:grid.N3/2].flatten())
-    np.add.at( spectrum[:,0],np.int8(k_0[indices2]),  RHSu[:,:,0].flatten())
-    np.add.at( spectrum[:,1],np.int8(k_m[indices1]),2*RHSv[:,:,1:grid.N3/2].flatten())
-    np.add.at( spectrum[:,1],np.int8(k_0[indices2]),  RHSv[:,:,0].flatten())
-    np.add.at( spectrum[:,2],np.int8(k_m[indices1]),2*RHSw[:,:,1:grid.N3/2].flatten())
-    np.add.at( spectrum[:,2],np.int8(k_0[indices2]),  RHSw[:,:,0].flatten())
-    Transfer = (spectrum[:,0] + spectrum[:,1] + spectrum[:,2] ) / np.sqrt(grid.N1*grid.N2*grid.N3)
-    return Transfer 
+    np.add.at( spectrum[:,0],np.int8(k_m[indices1]),np.real(2*RHSu[:,:,1:grid.N3/2].flatten()))
+    np.add.at( spectrum[:,0],np.int8(k_0[indices2]),np.real(  RHSu[:,:,0].flatten()))
+    np.add.at( spectrum[:,1],np.int8(k_m[indices1]),np.real(2*RHSv[:,:,1:grid.N3/2].flatten()))
+    np.add.at( spectrum[:,1],np.int8(k_0[indices2]),np.real(  RHSv[:,:,0].flatten()))
+    np.add.at( spectrum[:,2],np.int8(k_m[indices1]),np.real(2*RHSw[:,:,1:grid.N3/2].flatten()))
+    np.add.at( spectrum[:,2],np.int8(k_0[indices2]),np.real(  RHSw[:,:,0].flatten()))
+    Transfer = (spectrum[:,0] + spectrum[:,1] + spectrum[:,2] ) / (grid.N1*grid.N2*grid.N3)
+    return kdata,Transfer
+
+  def myFilter(self,uhat,kc):
+    uhatF = np.zeros(np.shape(uhat),dtype='complex')
+    uhatF[0:kc,0:kc,0:kc] = uhat[0:kc,0:kc,0:kc]
+
+    uhatF[0:kc,0:kc,0:kc] = uhat[0:kc,0:kc,0:kc] # get first quardants
+    uhatF[0:kc,-kc+1::,0:kc] = uhat[0:kc,-kc+1::,0:kc] #0:kc in k1 and -kc:0 in k2
+    uhatF[-kc+1::,0:kc,0:kc] = uhat[-kc+1::,0:kc,0:kc] #-kc:0 in k1 and 0:kc in k2
+    uhatF[-kc+1::,-kc+1::,0:kc] = uhat[-kc+1::,-kc+1::,0:kc] #-kc:0 in k1 and k2
+    return uhatF 

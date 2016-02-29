@@ -1,6 +1,6 @@
 import numpy as np
 from padding import *
-def computeRHS_NOSGS(main,grid,myFFT):
+def computeRHS_NOSGS(main,grid,myFFT,utilities):
     main.Q2U()
     scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
     ureal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
@@ -49,9 +49,7 @@ def computeRHS_NOSGS(main,grid,myFFT):
       main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
       main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
 
-### For SGS models where the stress can be instantaneously found from current field.
-## Use this for any EV model
-def computeRHS_SMAG(main,grid,myFFT):
+def computeRHS_SMAG(main,grid,myFFT,utilities):
     main.Q2U()
     scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
     ureal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
@@ -134,7 +132,7 @@ def computeRHS_SMAG(main,grid,myFFT):
                            1j*grid.k3*phat - main.nu*grid.ksqr*main.what + main.w0_w[:,:,:,0]
 
 
-def computeRHS_tmodel(main,grid,myFFT):
+def computeRHS_tmodel(main,grid,myFFT,utilities):
     main.Q2U()
     ## in the t-model, do 2x padding because we want to have convolutions where 
     ## the modes in G support twice the modes in F.
@@ -247,7 +245,7 @@ def computeRHS_tmodel(main,grid,myFFT):
 
     main.Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + main.w0_w[:,:,:,0]
 
-def computeRHS_FM1(main,grid,myFFT):
+def computeRHS_FM1(main,grid,myFFT,utilities):
     main.Q2U()
     ## in the t-model, do 2x padding because we want to have convolutions where 
     ## the modes in G support twice the modes in F.
@@ -375,7 +373,7 @@ def computeRHS_FM1(main,grid,myFFT):
       term += 3
 
 
-def computeRHS_FM2(main,grid,myFFT):
+def computeRHS_FM2(main,grid,myFFT,utilities):
     main.Q2U()
     ## do 2x padding because we want to have convolutions where 
     ## the modes in G support twice the modes in F.
@@ -632,7 +630,7 @@ def computeRHS_FM2(main,grid,myFFT):
 
 
 
-def computeRHS_FM1_2term(main,grid,myFFT):
+def computeRHS_FM1_2term(main,grid,myFFT,utilities):
     main.Q2U()
     ## in the t-model, do 2x padding because we want to have convolutions where 
     ## the modes in G support twice the modes in F.
@@ -749,7 +747,7 @@ def computeRHS_FM1_2term(main,grid,myFFT):
     main.Q[8::9,8::9,8::9] = -2./main.dt0*main.w01_w - 2.*main.PLQLw + 4./main.dt0*main.w0_w
 
 
-def computeRHS_CM1(main,grid,myFFT):
+def computeRHS_CM1(main,grid,myFFT,utilities):
     main.Q2U()
     ## in the t-model, do 2x padding because we want to have convolutions where 
     ## the modes in G support twice the modes in F.
@@ -875,7 +873,7 @@ def computeRHS_CM1(main,grid,myFFT):
 
 
 
-def computeRHS_BUDGETS(main,grid,myFFT):
+def computeRHS_BUDGETS(main,grid,myFFT,utilities):
     main.Q2U()
     ## in the t-model, do 2x padding because we want to have convolutions where 
     ## the modes in G support twice the modes in F.
@@ -989,4 +987,193 @@ def computeRHS_BUDGETS(main,grid,myFFT):
     main.Q[1::main.nvars,1::main.nvars,1::main.nvars] = main.PLv[:,:,:]
     main.Q[2::main.nvars,2::main.nvars,2::main.nvars] = main.PLw[:,:,:]
 
+def computeRHS_DSMAG(main,grid,myFFT,utilities):
+    main.Q2U()
+    DSmag_alpha = 2.
+    scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
+    ureal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    vreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    wreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    urealF = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    vrealF = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    wrealF = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+
+    ureal[:,:,:] = myFFT.ifftT_obj(pad(main.uhat,1))*scale
+    vreal[:,:,:] = myFFT.ifftT_obj(pad(main.vhat,1))*scale
+    wreal[:,:,:] = myFFT.ifftT_obj(pad(main.what,1))*scale
+
+    uuhat = unpad( myFFT.fft_obj(ureal*ureal),1)
+    vvhat = unpad( myFFT.fft_obj(vreal*vreal),1)
+    wwhat = unpad( myFFT.fft_obj(wreal*wreal),1)
+    uvhat = unpad( myFFT.fft_obj(ureal*vreal),1)
+    uwhat = unpad( myFFT.fft_obj(ureal*wreal),1)
+    vwhat = unpad( myFFT.fft_obj(vreal*wreal),1)
+
+    phat  = -grid.k1*grid.k1*grid.ksqr_i*uuhat - grid.k2*grid.k2*grid.ksqr_i*vvhat - \
+             grid.k3*grid.k3*grid.ksqr_i*wwhat - 2.*grid.k1*grid.k2*grid.ksqr_i*uvhat - \
+             2.*grid.k1*grid.k3*grid.ksqr_i*uwhat - 2.*grid.k2*grid.k3*grid.ksqr_i*vwhat
+
+    #### Dynamic Smagorinsky Contribution
+    ## First Need to compute Leonard Stress. Apply test filter at scale k_L
+    ## k_c = DSmag_alpha*k_L
+    kL = main.kc/DSmag_alpha
+    uhatF = utilities.myFilter(main.uhat,kL)
+    vhatF = utilities.myFilter(main.vhat,kL)
+    whatF = utilities.myFilter(main.what,kL)
+    urealF[:,:,:] = myFFT.ifftT_obj(pad(uhatF,1)*scale)
+    vrealF[:,:,:] = myFFT.ifftT_obj(pad(vhatF,1)*scale)
+    wrealF[:,:,:] = myFFT.ifftT_obj(pad(whatF,1)*scale)
+    uuhatF = unpad( myFFT.fft_obj(urealF*urealF),1)
+    vvhatF = unpad( myFFT.fft_obj(vrealF*vrealF),1)
+    wwhatF = unpad( myFFT.fft_obj(wrealF*wrealF),1)
+    uvhatF = unpad( myFFT.fft_obj(urealF*vrealF),1)
+    uwhatF = unpad( myFFT.fft_obj(urealF*wrealF),1)
+    vwhatF = unpad( myFFT.fft_obj(vrealF*wrealF),1)
+    ## Make Leonard Stress Tensor
+    Lhat = np.zeros((grid.N1,grid.N2,(grid.N3/2+1),6),dtype='complex')
+    Lhat[:,:,:,0] = utilities.myFilter(uuhat,kL) - uuhatF
+    Lhat[:,:,:,1] = utilities.myFilter(vvhat,kL) - vvhatF
+    Lhat[:,:,:,2] = utilities.myFilter(wwhat,kL) - wwhatF
+    Lhat[:,:,:,3] = utilities.myFilter(uvhat,kL) - uvhatF
+    Lhat[:,:,:,4] = utilities.myFilter(uwhat,kL) - uwhatF
+    Lhat[:,:,:,5] = utilities.myFilter(vwhat,kL) - vwhatF
+    ## Now compute the resolved stress tensor and the filtered stress tensor   
+    #resolved
+    S11hat = 1j*grid.k1*main.uhat
+    S22hat = 1j*grid.k2*main.vhat
+    S33hat = 1j*grid.k3*main.what
+    S12hat = 0.5*(1j*grid.k2*main.uhat + 1j*grid.k1*main.vhat)
+    S13hat = 0.5*(1j*grid.k3*main.uhat + 1j*grid.k1*main.what)
+    S23hat = 0.5*(1j*grid.k3*main.vhat + 1j*grid.k2*main.what)
+    S11real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S22real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S33real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S12real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S13real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S23real = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S11real[:,:,:] = myFFT.ifftT_obj(pad(S11hat,1)*scale)
+    S22real[:,:,:] = myFFT.ifftT_obj(pad(S22hat,1)*scale)
+    S33real[:,:,:] = myFFT.ifftT_obj(pad(S33hat,1)*scale)
+    S12real[:,:,:] = myFFT.ifftT_obj(pad(S12hat,1)*scale)
+    S13real[:,:,:] = myFFT.ifftT_obj(pad(S13hat,1)*scale)
+    S23real[:,:,:] = myFFT.ifftT_obj(pad(S23hat,1)*scale)
+    S_magreal = np.sqrt( 2.*(S11real*S11real + S22real*S22real + S33real*S33real + \
+              2.*S12real*S12real + 2.*S13real*S13real + 2.*S23real*S23real ) )
+    ## Filtered Stress Tensor
+    S11hatF = 1j*grid.k1*uhatF
+    S22hatF = 1j*grid.k2*vhatF
+    S33hatF = 1j*grid.k3*whatF
+    S12hatF = 0.5*(1j*grid.k2*uhatF + 1j*grid.k1*vhatF)
+    S13hatF = 0.5*(1j*grid.k3*uhatF + 1j*grid.k1*whatF)
+    S23hatF = 0.5*(1j*grid.k3*vhatF + 1j*grid.k2*whatF)
+    S11realF = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S22realF = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S33realF = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S12realF = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S13realF = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S23realF = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    S11realF[:,:,:] = myFFT.ifftT_obj(pad(S11hatF,1)*scale)
+    S22realF[:,:,:] = myFFT.ifftT_obj(pad(S22hatF,1)*scale)
+    S33realF[:,:,:] = myFFT.ifftT_obj(pad(S33hatF,1)*scale)
+    S12realF[:,:,:] = myFFT.ifftT_obj(pad(S12hatF,1)*scale)
+    S13realF[:,:,:] = myFFT.ifftT_obj(pad(S13hatF,1)*scale)
+    S23realF[:,:,:] = myFFT.ifftT_obj(pad(S23hatF,1)*scale)
+    S_magrealF = np.sqrt( 2.*(S11realF*S11realF + S22realF*S22realF + S33realF*S33realF + \
+              2.*S12realF*S12realF + 2.*S13realF*S13realF + 2.*S23realF*S23realF ) )
+
+
+    ## Now compute terms needed for M. Do pseudo-spectral for |S|Sij
+    # First do for S at the test filter
+    SFS11F = S_magrealF*S11realF[:,:,:]
+    SFS22F = S_magrealF*S22realF[:,:,:]
+    SFS33F = S_magrealF*S33realF[:,:,:]
+    SFS12F = S_magrealF*S12realF[:,:,:]
+    SFS13F = S_magrealF*S13realF[:,:,:]
+    SFS23F = S_magrealF*S23realF[:,:,:]
+    SFS11Fhat = unpad( myFFT.fft_obj( SFS11F ),1)  
+    SFS22Fhat = unpad( myFFT.fft_obj( SFS22F ),1)  
+    SFS33Fhat = unpad( myFFT.fft_obj( SFS33F ),1)  
+    SFS12Fhat = unpad( myFFT.fft_obj( SFS12F ),1)  
+    SFS13Fhat = unpad( myFFT.fft_obj( SFS13F ),1)  
+    SFS23Fhat = unpad( myFFT.fft_obj( SFS23F ),1)  
+    # Now do for resolved S. Apply test filter after transforming back to freq space
+    SS11  = S_magreal*S11real[:,:,:]
+    SS22  = S_magreal*S22real[:,:,:]
+    SS33  = S_magreal*S33real[:,:,:]
+    SS12  = S_magreal*S12real[:,:,:]
+    SS13  = S_magreal*S13real[:,:,:]
+    SS23  = S_magreal*S23real[:,:,:]
+    SS11hatF = utilities.myFilter( unpad( myFFT.fft_obj( SS11 ),1) ,kL)
+    SS22hatF = utilities.myFilter( unpad( myFFT.fft_obj( SS22 ),1) ,kL)
+    SS33hatF = utilities.myFilter( unpad( myFFT.fft_obj( SS33 ),1) ,kL)
+    SS12hatF = utilities.myFilter( unpad( myFFT.fft_obj( SS12 ),1) ,kL)
+    SS13hatF = utilities.myFilter( unpad( myFFT.fft_obj( SS13 ),1) ,kL)
+    SS23hatF = utilities.myFilter( unpad( myFFT.fft_obj( SS23 ),1) ,kL) 
+    
+    ## Now create Mhat tensor
+    Mhat = np.zeros((grid.N1,grid.N2,(grid.N3/2+1),6),dtype='complex')
+    Mhat[:,:,:,0] = -2.*grid.Delta**2*(DSmag_alpha**2*SFS11Fhat - SS11hatF)
+    Mhat[:,:,:,1] = -2.*grid.Delta**2*(DSmag_alpha**2*SFS22Fhat - SS22hatF)
+    Mhat[:,:,:,2] = -2.*grid.Delta**2*(DSmag_alpha**2*SFS33Fhat - SS33hatF)
+    Mhat[:,:,:,3] = -2.*grid.Delta**2*(DSmag_alpha**2*SFS12Fhat - SS12hatF)
+    Mhat[:,:,:,4] = -2.*grid.Delta**2*(DSmag_alpha**2*SFS13Fhat - SS13hatF)
+    Mhat[:,:,:,5] = -2.*grid.Delta**2*(DSmag_alpha**2*SFS23Fhat - SS23hatF)
+
+    ## Now find Cs^2 = <Lij Mij>/<Mij Mij> Need to transform back to real space to get this
+    Mreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3),6) )
+    Lreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3),6) )
+    Mreal[:,:,:,0] = myFFT.ifftT_obj(pad(Mhat[:,:,:,0],1))*scale
+    Mreal[:,:,:,1] = myFFT.ifftT_obj(pad(Mhat[:,:,:,1],1))*scale
+    Mreal[:,:,:,2] = myFFT.ifftT_obj(pad(Mhat[:,:,:,2],1))*scale
+    Mreal[:,:,:,3] = myFFT.ifftT_obj(pad(Mhat[:,:,:,3],1))*scale
+    Mreal[:,:,:,4] = myFFT.ifftT_obj(pad(Mhat[:,:,:,4],1))*scale
+    Mreal[:,:,:,5] = myFFT.ifftT_obj(pad(Mhat[:,:,:,5],1))*scale
+    Lreal[:,:,:,0] = myFFT.ifftT_obj(pad(Lhat[:,:,:,0],1))*scale
+    Lreal[:,:,:,1] = myFFT.ifftT_obj(pad(Lhat[:,:,:,1],1))*scale
+    Lreal[:,:,:,2] = myFFT.ifftT_obj(pad(Lhat[:,:,:,2],1))*scale
+    Lreal[:,:,:,3] = myFFT.ifftT_obj(pad(Lhat[:,:,:,3],1))*scale
+    Lreal[:,:,:,4] = myFFT.ifftT_obj(pad(Lhat[:,:,:,4],1))*scale
+    Lreal[:,:,:,5] = myFFT.ifftT_obj(pad(Lhat[:,:,:,5],1))*scale
+    num = Mreal[:,:,:,0]*Lreal[:,:,:,0]  + Mreal[:,:,:,1]*Lreal[:,:,:,1] + Mreal[:,:,:,2]*Lreal[:,:,:,2] + \
+          Mreal[:,:,:,3]*Lreal[:,:,:,3]  + Mreal[:,:,:,4]*Lreal[:,:,:,4] + Mreal[:,:,:,5]*Lreal[:,:,:,5]
+    den = Mreal[:,:,:,0]*Mreal[:,:,:,0]  + Mreal[:,:,:,1]*Mreal[:,:,:,1] + Mreal[:,:,:,2]*Mreal[:,:,:,2] + \
+          Mreal[:,:,:,3]*Mreal[:,:,:,3]  + Mreal[:,:,:,4]*Mreal[:,:,:,4] + Mreal[:,:,:,5]*Mreal[:,:,:,5]
+    Cs_sqr = np.mean(num)/np.mean(den)
+
+    nutreal = Cs_sqr*grid.Delta*grid.Delta*np.abs(S_magreal)
+    
+    tau11real = -2.*nutreal*S11real
+    tau22real = -2.*nutreal*S22real
+    tau33real = -2.*nutreal*S33real
+    tau12real = -2.*nutreal*S12real
+    tau13real = -2.*nutreal*S13real
+    tau23real = -2.*nutreal*S23real
+   
+    tauhat = np.zeros((grid.N1,grid.N2,grid.N3/2+1,6),dtype='complex') 
+    tauhat[:,:,:,0] = unpad( myFFT.fft_obj( -2.*nutreal*S11real ),1)  #11
+    tauhat[:,:,:,1] = unpad( myFFT.fft_obj( -2.*nutreal*S22real ),1)  #22
+    tauhat[:,:,:,2] = unpad( myFFT.fft_obj( -2.*nutreal*S33real ),1)  #33
+    tauhat[:,:,:,3] = unpad( myFFT.fft_obj( -2.*nutreal*S12real ),1)  #12
+    tauhat[:,:,:,4] = unpad( myFFT.fft_obj( -2.*nutreal*S13real ),1)  #13
+    tauhat[:,:,:,5] = unpad( myFFT.fft_obj( -2.*nutreal*S23real ),1)  #23
+
+    ## contribution of projection to RHS sgs (k_m k_j)/k^2 \tau_{jm}
+    tau_projection  = 1j*grid.ksqr_i*( grid.k1*grid.k1*tauhat[:,:,:,0] + grid.k2*grid.k2*tauhat[:,:,:,1] + \
+             grid.k3*grid.k3*tauhat[:,:,:,2] + 2.*grid.k1*grid.k2*tauhat[:,:,:,3] + \
+             2.*grid.k1*grid.k3*tauhat[:,:,:,4] + 2.*grid.k2*grid.k3*tauhat[:,:,:,5] )
+
+    #Now SGS contributions. w = -\delta_{im}\tau_{jm}  + k_i k_m / k^2 i k_j \tau_{jm}
+    main.w0_u[:,:,:,0] = -1j*grid.k1*tauhat[:,:,:,0] - 1j*grid.k2*tauhat[:,:,:,3] - 1j*grid.k3*tauhat[:,:,:,4] + 1j*grid.k1*tau_projection
+    main.w0_v[:,:,:,0] = -1j*grid.k1*tauhat[:,:,:,3] - 1j*grid.k2*tauhat[:,:,:,1] - 1j*grid.k3*tauhat[:,:,:,5] + 1j*grid.k2*tau_projection
+    main.w0_w[:,:,:,0] = -1j*grid.k1*tauhat[:,:,:,4] - 1j*grid.k2*tauhat[:,:,:,5] - 1j*grid.k3*tauhat[:,:,:,2] + 1j*grid.k3*tau_projection
+
+    main.Q[0::3,0::3,0::3] = -1j*grid.k1*uuhat - 1j*grid.k2*uvhat - 1j*grid.k3*uwhat - \
+                           1j*grid.k1*phat - main.nu*grid.ksqr*main.uhat + main.w0_u[:,:,:,0]
+
+    main.Q[1::3,1::3,1::3] = -1j*grid.k1*uvhat - 1j*grid.k2*vvhat - 1j*grid.k3*vwhat - \
+                           1j*grid.k2*phat - main.nu*grid.ksqr*main.vhat + main.w0_v[:,:,:,0] 
+ 
+
+    main.Q[2::3,2::3,2::3] = -1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
+                           1j*grid.k3*phat - main.nu*grid.ksqr*main.what + main.w0_w[:,:,:,0]
 
