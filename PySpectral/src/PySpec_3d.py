@@ -70,7 +70,7 @@ if not os.path.exists('3DSolution'):
 # Save the grid information
 np.savez('3DSolution/grid',k1=grid.k1,k2=grid.k2,k3=grid.k3,x=grid.x,y=grid.y,z=grid.z)
 # Save the run information
-np.savez('3DSolution/runinfo',turb_model=turb_model,dt=dt,save_freq=save_freq)
+np.savez('3DSolution/runinfo',turb_model=turb_model,dt=dt,save_freq=save_freq,nu=nu)
 
 #RK4 time advancement function. Note that to save memory the computeRHS 
 #function puts the RHS array into the Q array
