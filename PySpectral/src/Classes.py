@@ -828,43 +828,23 @@ class utilitiesClass():
     return kdata,Transfer 
 
   def computeTransfer_SGS(self,main,grid,myFFT):
-    scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
-    ureal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
-    vreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
-    wreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
-
-    main.uhat = unpad(pad(main.uhat,1),1)
-    main.vhat = unpad(pad(main.vhat,1),1)
-    main.what = unpad(pad(main.what,1),1)
-
-    ureal[:,:,:] = myFFT.ifftT_obj(pad(main.uhat,1))*scale
-    vreal[:,:,:] = myFFT.ifftT_obj(pad(main.vhat,1))*scale
-    wreal[:,:,:] = myFFT.ifftT_obj(pad(main.what,1))*scale
-
-    uuhat = unpad( myFFT.fft_obj(ureal*ureal),1)
-    vvhat = unpad( myFFT.fft_obj(vreal*vreal),1)
-    wwhat = unpad( myFFT.fft_obj(wreal*wreal),1)
-    uvhat = unpad( myFFT.fft_obj(ureal*vreal),1)
-    uwhat = unpad( myFFT.fft_obj(ureal*wreal),1)
-    vwhat = unpad( myFFT.fft_obj(vreal*wreal),1)
-
-    phat  = grid.ksqr_i*( -grid.k1*grid.k1*uuhat - grid.k2*grid.k2*vvhat - \
-           grid.k3*grid.k3*wwhat - 2.*grid.k1*grid.k2*uvhat - \
-           2.*grid.k1*grid.k3*uwhat - 2.*grid.k2*grid.k3*vwhat )
-
     RHSu = np.zeros((grid.N1,grid.N2,grid.N3/2+1),dtype='complex')
     RHSv = np.zeros((grid.N1,grid.N2,grid.N3/2+1),dtype='complex')
     RHSw = np.zeros((grid.N1,grid.N2,grid.N3/2+1),dtype='complex')
 
+    uFilt = grid.Gf*main.uhat
+    vFilt = grid.Gf*main.vhat
+    wFilt = grid.Gf*main.what
 
-    RHSu[:,:,:] = np.conj(main.uhat)*(-1j*grid.k1*uuhat - 1j*grid.k2*uvhat - 1j*grid.k3*uwhat - \
-                                       1j*grid.k1*phat  + main.w0_u[:,:,:,0] )
+    uFilt = unpad(pad(uFilt,1),1)
+    vFilt = unpad(pad(vFilt,1),1)
+    wFilt = unpad(pad(wFilt,1),1)
 
-    RHSv[:,:,:] = np.conj(main.vhat)*(-1j*grid.k1*uvhat - 1j*grid.k2*vvhat - 1j*grid.k3*vwhat - \
-                                       1j*grid.k2*phat  + main.w0_v[:,:,:,0] )
+    RHSu[:,:,:] =  np.conj(uFilt)*main.w0_u[:,:,:,0] 
 
-    RHSw[:,:,:] = np.conj(main.what)*(-1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
-                                      1j*grid.k3*phat + main.w0_w[:,:,:,0] )
+    RHSv[:,:,:] =  np.conj(vFilt)*main.w0_v[:,:,:,0]
+
+    RHSw[:,:,:] =  np.conj(wFilt)*main.w0_w[:,:,:,0]
     k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
     k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
     kmax = np.int(np.round(np.amax(k_m)))
