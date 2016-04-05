@@ -2,7 +2,7 @@ import numpy as np
 from scipy import weave
 from scipy.weave import converters
 from padding import pad,unpad,pad_2x,unpad_2x,seperateModes
-def computeRHS_NOSGS_WEAVE(main,grid,myFFT):
+def computeRHS_NOSGS_WEAVE(main,grid,myFFT,utilities):
     main.Q2U()
     scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
     ureal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
@@ -13,9 +13,9 @@ def computeRHS_NOSGS_WEAVE(main,grid,myFFT):
     main.vhat = unpad(pad(main.vhat,1),1)
     main.what = unpad(pad(main.what,1),1)
 
-    ureal[:,:,:] = myFFT.ifftT_obj(pad(main.uhat,1))*scale
-    vreal[:,:,:] = myFFT.ifftT_obj(pad(main.vhat,1))*scale
-    wreal[:,:,:] = myFFT.ifftT_obj(pad(main.what,1))*scale
+    ureal = myFFT.ifftT_obj(pad(main.uhat,1))*scale
+    vreal = myFFT.ifftT_obj(pad(main.vhat,1))*scale
+    wreal = myFFT.ifftT_obj(pad(main.what,1))*scale
 
     uuhat = unpad( myFFT.fft_obj(ureal*ureal),1)
     vvhat = unpad( myFFT.fft_obj(vreal*vreal),1)
