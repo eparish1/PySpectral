@@ -650,18 +650,11 @@ class utilitiesClass():
       return k_m,spectrum 
 
   def computeSGS_DNS(self,main,grid,myFFT):
-    N1,N2,N3 = np.shape(main.uhat)
-    N3 = (N3-1)*2
-    Gf = np.zeros(np.shape(main.uhat)) #Sharp Spectral cutoff (we cutoff the oddball frequency)
-    Gf[0:main.kc,0:main.kc,0:main.kc] = 1 # get first quardants
-    Gf[0:main.kc,N2-main.kc+1::,0:main.kc] = 1 #0:kc in k1 and -kc:0 in k2
-    Gf[N1-main.kc+1::,0:main.kc,0:main.kc] = 1 #-kc:0 in k1 and 0:kc in k2
-    Gf[N1-main.kc+1::,N2-main.kc+1::,0:main.kc] = 1 #-kc:0 in k1 and k2
-
-    ufilt = Gf*main.uhat
-    vfilt = Gf*main.vhat
-    wfilt = Gf*main.what
-    scale = np.sqrt( (3./2.)**3*np.sqrt(N1*N2*N3) )
+    N1,N2,N3 = grid.N1,grid.N2,grid.N3
+    ufilt = grid.Gf*main.uhat
+    vfilt = grid.Gf*main.vhat
+    wfilt = grid.Gf*main.what
+    scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
 
     ureal = np.zeros((N1*3/2,N2*3/2,N3*3/2))
     vreal = np.zeros((N1*3/2,N2*3/2,N3*3/2))
@@ -705,18 +698,27 @@ class utilitiesClass():
     ## Compute SGS tensor. 
     # tau_ij = [d/dx 
     tauhat = np.zeros((N1,N2,(N3/2+1),6),dtype='complex')
-    tauhat[:,:,:,0] = Gf*uuhat - uuhat_filt
-    tauhat[:,:,:,1] = Gf*vvhat - vvhat_filt
-    tauhat[:,:,:,2] = Gf*wwhat - wwhat_filt
-    tauhat[:,:,:,3] = Gf*uvhat - uvhat_filt
-    tauhat[:,:,:,4] = Gf*uwhat - uwhat_filt
-    tauhat[:,:,:,5] = Gf*vwhat - vwhat_filt
-  
-    #w0_u = -(1j*grid.k1*tauhat[:,:,:,0] + 1j*grid.k2*tauhat[:,:,:,3] + 1j*grid.k3*tauhat[:,:,:,4])
-    #w0_v = -(1j*grid.k1*tauhat[:,:,:,3] + 1j*grid.k2*tauhat[:,:,:,1] + 1j*grid.k3*tauhat[:,:,:,5])
-    #w0_w = -(1j*grid.k1*tauhat[:,:,:,4] + 1j*grid.k2*tauhat[:,:,:,5] + 1j*grid.k3*tauhat[:,:,:,2])
-    #return w0_u,w0_v,w0_w
-    return tauhat 
+    tauhat[:,:,:,0] = grid.Gf*uuhat - uuhat_filt
+    tauhat[:,:,:,1] = grid.Gf*vvhat - vvhat_filt
+    tauhat[:,:,:,2] = grid.Gf*wwhat - wwhat_filt
+    tauhat[:,:,:,3] = grid.Gf*uvhat - uvhat_filt
+    tauhat[:,:,:,4] = grid.Gf*uwhat - uwhat_filt
+    tauhat[:,:,:,5] = grid.Gf*vwhat - vwhat_filt
+ 
+    ## contribution of projection to RHS sgs (k_m k_j)/k^2 \tau_{jm}
+    tau_projection  = 1j*grid.ksqr_i*( grid.k1*grid.k1*tauhat[:,:,:,0] + grid.k2*grid.k2*tauhat[:,:,:,1] + \
+             grid.k3*grid.k3*tauhat[:,:,:,2] + 2.*grid.k1*grid.k2*tauhat[:,:,:,3] + \
+             2.*grid.k1*grid.k3*tauhat[:,:,:,4] + 2.*grid.k2*grid.k3*tauhat[:,:,:,5] )
+
+    w0_u = np.zeros((N1,N2,N3/2+1,1),dtype='complex')
+    w0_v = np.zeros((N1,N2,N3/2+1,1),dtype='complex')
+    w0_w = np.zeros((N1,N2,N3/2+1,1),dtype='complex')
+
+    w0_u[:,:,:,0] = -(1j*grid.k1*tauhat[:,:,:,0] + 1j*grid.k2*tauhat[:,:,:,3] + 1j*grid.k3*tauhat[:,:,:,4]) + 1j*grid.k1*tau_projection
+    w0_v[:,:,:,0] = -(1j*grid.k1*tauhat[:,:,:,3] + 1j*grid.k2*tauhat[:,:,:,1] + 1j*grid.k3*tauhat[:,:,:,5]) + 1j*grid.k2*tau_projection
+    w0_w[:,:,:,0] = -(1j*grid.k1*tauhat[:,:,:,4] + 1j*grid.k2*tauhat[:,:,:,5] + 1j*grid.k3*tauhat[:,:,:,2]) + 1j*grid.k3*tau_projection
+    return w0_u,w0_v,w0_w
+    #return tauhat 
   def computeTransfer(self,main,grid,myFFT):
     scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
     ureal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )

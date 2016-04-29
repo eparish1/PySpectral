@@ -16,6 +16,11 @@ class variablesFromFile:
       self.w0_u = solutionFile['w0_u'][:,:,:,0]
       self.w0_v = solutionFile['w0_v'][:,:,:,0]
       self.w0_w = solutionFile['w0_w'][:,:,:,0]
+    else:
+      N1,N2,N3 = np.shape(self.uhat)
+      self.w0_u = np.zeros((N1,N2,N3,1),dtype='complex')
+      self.w0_v = np.zeros((N1,N2,N3,1),dtype='complex')
+      self.w0_w = np.zeros((N1,N2,N3,1),dtype='complex')
 
   def setFieldsFromFile(self,solutionFile):
     self.uhat[:,:,:] = solutionFile['uhat'][:,:,:]
@@ -42,8 +47,15 @@ class gridFromFile:
     self.k2[:,:,:] = gridFile['k2']
     self.k3[:,:,:] = gridFile['k3']
 
+    k1f = np.fft.fftshift( np.linspace(-N1,N1-1,2.*N1) )
+    k2f = np.fft.fftshift( np.linspace(-N2,N2-1,2.*N2) )
+    k3f = np.linspace( 0,N3,N3+1 )
+    self.k2f,self.k1f,self.k3f = np.meshgrid(k2f,k1f,k3f)
+
     self.ksqr = self.k1*self.k1 + self.k2*self.k2 + self.k3*self.k3 + 1.e-50
     self.ksqr_i = 1./self.ksqr
+    self.ksqrf = self.k1f*self.k1f + self.k2f*self.k2f + self.k3f*self.k3f + 1.e-50
+    self.ksqrf_i = 1./self.ksqrf
     self.kc = kc
     self.Delta = np.pi/self.kc
     self.Gf = np.zeros(np.shape(self.k1)) #Sharp Spectral cutoff (we cutoff the oddball frequency)
@@ -54,7 +66,7 @@ class gridFromFile:
 
 
 ## And same for FFT class
-class FFTclass:
+class FFTFromFile:
   def __init__(self,gridFile,nthreads):
     N1,N2,N3 = np.shape(gridFile['k1'])
     N3 = (N3-1)*2
