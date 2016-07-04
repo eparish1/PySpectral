@@ -71,6 +71,12 @@ def computeRHS_SMAG(main,grid,myFFT,utilities):
              grid.k3*grid.k3*grid.ksqr_i*wwhat - 2.*grid.k1*grid.k2*grid.ksqr_i*uvhat - \
              2.*grid.k1*grid.k3*grid.ksqr_i*uwhat - 2.*grid.k2*grid.k3*grid.ksqr_i*vwhat
 
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+
+
     S11hat = 1j*grid.k1*main.uhat
     S22hat = 1j*grid.k2*main.vhat
     S33hat = 1j*grid.k3*main.what
@@ -193,6 +199,13 @@ def computeRHS_tmodel(main,grid,myFFT,utilities):
              grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
              2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
 
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+
+
+
     PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
                                          1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
 
@@ -305,6 +318,13 @@ def computeRHS_FM1(main,grid,myFFT,utilities):
     phat  = -grid.k1f*grid.k1f*grid.ksqrf_i*uuhat - grid.k2f*grid.k2f*grid.ksqrf_i*vvhat - \
              grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
              2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
+
+
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+
 
     PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
                                          1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
@@ -433,6 +453,12 @@ def computeRHS_FM2(main,grid,myFFT,utilities):
     phat  = -grid.k1f*grid.k1f*grid.ksqrf_i*uuhat - grid.k2f*grid.k2f*grid.ksqrf_i*vvhat - \
              grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
              2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
+
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+
 
     PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
                                          1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
@@ -691,6 +717,12 @@ def computeRHS_FM1_2term(main,grid,myFFT,utilities):
              grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
              2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
 
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+
+
     PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
                                          1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
 
@@ -807,6 +839,12 @@ def computeRHS_CM1(main,grid,myFFT,utilities):
     phat  = -grid.k1f*grid.k1f*grid.ksqrf_i*uuhat - grid.k2f*grid.k2f*grid.ksqrf_i*vvhat - \
              grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
              2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
+
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+
 
     PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
                                          1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
@@ -934,6 +972,12 @@ def computeRHS_BUDGETS(main,grid,myFFT,utilities):
              grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
              2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
 
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+
+
     PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
                                          1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
 
@@ -1012,6 +1056,12 @@ def computeRHS_DSMAG(main,grid,myFFT,utilities):
     phat  = -grid.k1*grid.k1*grid.ksqr_i*uuhat - grid.k2*grid.k2*grid.ksqr_i*vvhat - \
              grid.k3*grid.k3*grid.ksqr_i*wwhat - 2.*grid.k1*grid.k2*grid.ksqr_i*uvhat - \
              2.*grid.k1*grid.k3*grid.ksqr_i*uwhat - 2.*grid.k2*grid.k3*grid.ksqr_i*vwhat
+
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+
 
     #### Dynamic Smagorinsky Contribution
     ## First Need to compute Leonard Stress. Apply test filter at scale k_L
