@@ -12,6 +12,12 @@ if 'weave' in globals():	             #|
   pass					     #|
 else:				             #|
   weave = 0				     #|
+if 'dim' in globals():	                     #|
+  pass					     #|
+else:				             #|
+  dim = 3				     #|
+
+
 if 'rotate' in globals():	             #|
   if ('Om1' in globals()\
   and 'Om2' in globals()\
@@ -60,7 +66,7 @@ utilities = utilitiesClass()
 myFFT = FFTclass(N1,N2,N3,nthreads)
 grid = gridclass(N1,N2,N3,x,y,z,kc)
 main = variables(weave,turb_model,rotate,Om1,Om2,Om3,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
-                 dt0_subintegrations,dt1,dt1_subintegrations,cfl)
+                 dt0_subintegrations,dt1,dt1_subintegrations,cfl,dim)
 #====================================================================
 
 # Make Solution Directory if it does not exist
