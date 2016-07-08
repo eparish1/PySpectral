@@ -200,9 +200,9 @@ def computeRHS_tmodel(main,grid,myFFT,utilities):
              2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
 
     if (main.rotate == 1):
-      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
-                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
-                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqrf_i*1j*( grid.k1f*(vhat_pad*main.Om3 - what_pad*main.Om2) + 
+                    grid.k2f*(what_pad*main.Om1 - uhat_pad*main.Om3) + \
+                    grid.k3f*(uhat_pad*main.Om2 - vhat_pad*main.Om1))
 
 
 
@@ -321,9 +321,9 @@ def computeRHS_FM1(main,grid,myFFT,utilities):
 
 
     if (main.rotate == 1):
-      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
-                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
-                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqrf_i*1j*( grid.k1f*(vhat_pad*main.Om3 - what_pad*main.Om2) + 
+                    grid.k2f*(what_pad*main.Om1 - uhat_pad*main.Om3) + \
+                    grid.k3f*(uhat_pad*main.Om2 - vhat_pad*main.Om1))
 
 
     PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
