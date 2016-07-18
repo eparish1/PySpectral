@@ -1,4 +1,5 @@
 import numpy as np
+from mpi4py import MPI
 from padding import *
 def allGather_physical(tmp_local,comm,mpi_rank,N1,N2,N3,num_processes,Npy):
   data = comm.gather(tmp_local,root = 0)
@@ -18,6 +19,10 @@ def allGather_spectral(tmp_local,comm,mpi_rank,N1,N2,N3,num_processes,Npx):
 
 
 def computeRHS_NOSGS(main,grid,myFFT):
+    comm = MPI.COMM_WORLD
+    num_processes = comm.Get_size()
+    mpi_rank = comm.Get_rank()
+
     main.Q2U()
     
     main.uhat = myFFT.dealias(main.uhat,grid)
@@ -45,14 +50,14 @@ def computeRHS_NOSGS(main,grid,myFFT):
                     grid.k2[None,:,None]*(main.what*main.Om1 - main.uhat*main.Om3) + \
                     grid.k3[None,None,:]*(main.uhat*main.Om2 - main.vhat*main.Om1))
 
-    main.Q[0] = -1j*grid.k1[:,None,None]*main.NL[0] - 1j*grid.k2[None,:,None]*main.NL[3] - 1j*grid.k3[None,None,:]*main.NL[4] - \
-                                         1j*grid.k1[:,None,None]*phat - main.nu*grid.ksqr*main.uhat
+    main.Q[0] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[0] - 1j*grid.k2[None,:,None]*main.NL[3] - 1j*grid.k3[None,None,:]*main.NL[4] - \
+                                         1j*grid.k1[:,None,None]*phat - main.nu*grid.ksqr*main.uhat ,grid)
 
-    main.Q[1] = -1j*grid.k1[:,None,None]*main.NL[3] - 1j*grid.k2[None,:,None]*main.NL[1] - 1j*grid.k3[None,None,:]*main.NL[5] - \
-                                         1j*grid.k2[None,:,None]*phat - main.nu*grid.ksqr*main.vhat
+    main.Q[1] = myFFT.dealias(-1j*grid.k1[:,None,None]*main.NL[3] - 1j*grid.k2[None,:,None]*main.NL[1] - 1j*grid.k3[None,None,:]*main.NL[5] - \
+                                         1j*grid.k2[None,:,None]*phat - main.nu*grid.ksqr*main.vhat ,grid)
 
-    main.Q[2] = -1j*grid.k1[:,None,None]*main.NL[4] - 1j*grid.k2[None,:,None]*main.NL[5] - 1j*grid.k3*main.NL[2] - \
-                                         1j*grid.k3[None,None,:]*phat - main.nu*grid.ksqr*main.what
+    main.Q[2] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[4] - 1j*grid.k2[None,:,None]*main.NL[5] - 1j*grid.k3[None,None,:]*main.NL[2] - \
+                                         1j*grid.k3[None,None,:]*phat - main.nu*grid.ksqr*main.what ,grid)
 
     if (main.rotate == 1):
       main.Q[0] = main.Q[0] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
