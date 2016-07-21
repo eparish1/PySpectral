@@ -424,10 +424,13 @@ class variables:
 
 
 class gridclass:
-  def __init__(self,N1,N2,N3,x,y,z,kc):
+  def __init__(self,N1,N2,N3,x,y,z,kc,L1,L2,L3):
     self.N1 = N1
     self.N2 = N2
     self.N3 = N3
+    self.L1 = L1
+    self.L2 = L2
+    self.L3 = L3
     self.x = np.zeros(np.shape(x))
     self.x[:,:,:] = x[:,:,:]
     self.y = np.zeros(np.shape(y))
@@ -437,12 +440,13 @@ class gridclass:
     self.dx = x[1,0,0] - x[0,0,0]
     self.dy = y[0,1,0] - y[0,0,0]
     self.dz = z[0,0,1] - z[0,0,0]
-    k1 = np.fft.fftshift( np.linspace(-N1/2,N1/2-1,N1) )
-    k2 = np.fft.fftshift( np.linspace(-N2/2,N2/2-1,N2) )
-    k3 = np.linspace( 0,N3/2,N3/2+1 )
-    k1f = np.fft.fftshift( np.linspace(-N1,N1-1,2.*N1) )
-    k2f = np.fft.fftshift( np.linspace(-N2,N2-1,2.*N2) )
-    k3f = np.linspace( 0,N3,N3+1 )
+    k1 = np.fft.fftshift( np.linspace(-N1/2,N1/2-1,N1) ) * 2.*np.pi / L1
+    k2 = np.fft.fftshift( np.linspace(-N2/2,N2/2-1,N2) ) * 2.*np.pi / L2
+    k3 = np.linspace( 0,N3/2,N3/2+1 ) * 2. * np.pi / L3
+    k1f = np.fft.fftshift( np.linspace(-N1,N1-1,2.*N1) ) * 2.*np.pi / L1
+    k2f = np.fft.fftshift( np.linspace(-N2,N2-1,2.*N2) ) * 2.*np.pi / L2
+    k3f = np.linspace( 0,N3,N3+1 ) * 2. * np.pi / L3
+
 
     self.k2,self.k1,self.k3 = np.meshgrid(k2,k1,k3)
     self.k2f,self.k1f,self.k3f = np.meshgrid(k2f,k1f,k3f)
@@ -616,9 +620,27 @@ class utilitiesClass():
       enstrophy = np.real(0.5*(om1E + om2E + om3E)/(grid.N1*grid.N2*grid.N3))
       return enstrophy 
 
+  def computeEnstrophy_2D(self,main,grid):
+      omega = 1j*grid.k1*main.vhat - 1j*grid.k2*main.uhat
+      om1E = np.sum(omega[:,:,0]*np.conj(omega[:,:,0]) )  
+      enstrophy = np.real(om1E)/(grid.N1*grid.N2*grid.N3)
+      return enstrophy 
+
+  def computeEnstrophy_resolved_2D(self,main,grid):
+      uFilt = grid.Gf*main.uhat
+      vFilt = grid.Gf*main.vhat
+      omega = 1j*grid.k1*vFilt - 1j*grid.k2*uFilt
+      om1E = np.sum(omega[:,:,0]*np.conj(omega[:,:,0]) )  
+      enstrophy = np.real(om1E)/(grid.N1*grid.N2*grid.N3)
+      return enstrophy
+
+
+
   def computeSpectrum(self,main,grid):
-      k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
-      k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
+
+      ksqr = (grid.k1*grid.L1/(2.*np.pi))**2 + (grid.k2*grid.L2/(2.*np.pi))**2 + (grid.k3*grid.L3/(2.*np.pi))**2
+      k_m, indices1 = np.unique((np.rint(np.sqrt(ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
+      k_0, indices2 = np.unique((np.rint(np.sqrt(ksqr[:,:,0].flatten()))), return_inverse=True)
 #      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,:].flatten())), return_inverse=True)
       kmax = np.int(np.round(np.amax(k_m)))
       kdata = np.linspace(0,kmax,kmax+1)
@@ -651,6 +673,19 @@ class utilitiesClass():
      
       return kdata,spectrum
 
+  def computeEnstrophySpectrum_2D(self,main,grid):
+      kmag = np.sqrt( grid.k1**2 + grid.k2**2 )
+      k_m, indices1 = np.unique((np.rint(kmag[:,:,0].flatten())), return_inverse=True)
+      kmax = np.int(np.round(np.amax(k_m)))
+      kdata = np.linspace(0,kmax,kmax+1)
+      spectrum = np.zeros((kmax+1),dtype='complex')
+      omega = 1j*grid.k1*main.vhat - 1j*grid.k2*main.uhat
+      np.add.at( spectrum[:],np.int8(k_m[indices1]),omega[:,:,0].flatten()*np.conj(omega[:,:,0].flatten()))
+      spectrum = spectrum/(grid.N1*grid.N2*grid.N3)
+      return kdata,spectrum
+
+
+
   def computeSpectrum_2D(self,main,grid):
       kmag = np.sqrt( grid.k1**2 + grid.k2**2 )
       k_m, indices1 = np.unique((np.rint(kmag[:,:,0].flatten())), return_inverse=True)
@@ -665,8 +700,9 @@ class utilitiesClass():
 
 
   def computeSpectrum_resolved(self,main,grid):
-      k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
-      k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
+      ksqr = (grid.k1*grid.L1/(2.*np.pi))**2 + (grid.k2*grid.L2/(2.*np.pi))**2 + (grid.k3*grid.L3/(2.*np.pi))**2
+      k_m, indices1 = np.unique((np.rint(np.sqrt(ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
+      k_0, indices2 = np.unique((np.rint(np.sqrt(ksqr[:,:,0].flatten()))), return_inverse=True)
 #      k_m, indices1 = np.unique(np.rint(np.sqrt(grid.ksqr[:,:,:].flatten())), return_inverse=True)
       kmax = np.int(np.round(np.amax(k_m)))
       kdata = np.linspace(0,kmax,kmax+1)
@@ -864,8 +900,10 @@ class utilitiesClass():
 
     RHSw[:,:,:] = np.conj(main.what)*(-1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
                                       1j*grid.k3*phat)
-    k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
-    k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
+
+    ksqr = (grid.k1*grid.L1/(2.*np.pi))**2 + (grid.k2*grid.L2/(2.*np.pi))**2 + (grid.k3*grid.L3/(2.*np.pi))**2
+    k_m, indices1 = np.unique((np.rint(np.sqrt(ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
+    k_0, indices2 = np.unique((np.rint(np.sqrt(ksqr[:,:,0].flatten()))), return_inverse=True)
     kmax = np.int(np.round(np.amax(k_m)))
     kdata = np.linspace(0,kmax,kmax+1)
     spectrum = np.zeros((kmax+1,3),dtype='complex')
@@ -971,8 +1009,9 @@ class utilitiesClass():
 
     RHSw[:,:,:] = np.conj(wFilt)*(-1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
                                       1j*grid.k3*phat)
-    k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
-    k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
+    ksqr = (grid.k1*grid.L1/(2.*np.pi))**2 + (grid.k2*grid.L2/(2.*np.pi))**2 + (grid.k3*grid.L3/(2.*np.pi))**2
+    k_m, indices1 = np.unique((np.rint(np.sqrt(ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
+    k_0, indices2 = np.unique((np.rint(np.sqrt(ksqr[:,:,0].flatten()))), return_inverse=True)
     kmax = np.int(np.round(np.amax(k_m)))
     kdata = np.linspace(0,kmax,kmax+1)
     spectrum = np.zeros((kmax+1,3),dtype='complex')
@@ -1059,8 +1098,10 @@ class utilitiesClass():
     RHSv[:,:,:] =  np.conj(vFilt)*main.w0_v[:,:,:,0]
 
     RHSw[:,:,:] =  np.conj(wFilt)*main.w0_w[:,:,:,0]
-    k_m, indices1 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
-    k_0, indices2 = np.unique((np.rint(np.sqrt(grid.ksqr[:,:,0].flatten()))), return_inverse=True)
+
+    ksqr = (grid.k1*grid.L1/(2.*np.pi))**2 + (grid.k2*grid.L2/(2.*np.pi))**2 + (grid.k3*grid.L3/(2.*np.pi))**2
+    k_m, indices1 = np.unique((np.rint(np.sqrt(ksqr[:,:,1:grid.N3/2].flatten()))), return_inverse=True)
+    k_0, indices2 = np.unique((np.rint(np.sqrt(ksqr[:,:,0].flatten()))), return_inverse=True)
     kmax = np.int(np.round(np.amax(k_m)))
     kdata = np.linspace(0,kmax,kmax+1)
     spectrum = np.zeros((kmax+1,3),dtype='complex')
@@ -1092,7 +1133,7 @@ class utilitiesClass():
     RHSv[:,:,:] =  np.conj(vFilt)*main.w0_v[:,:,:,0]
 
     RHSw[:,:,:] =  np.conj(wFilt)*main.w0_w[:,:,:,0]
-    ksqr2d = k1**2 + k2**2
+    ksqr2d = grid.k1**2 + grid.k2**2
     k_m, indices1 = np.unique((np.rint(np.sqrt(ksqr2d[:,:,0].flatten()))), return_inverse=True)
     kmax = np.int(np.round(np.amax(k_m)))
     kdata = np.linspace(0,kmax,kmax+1)

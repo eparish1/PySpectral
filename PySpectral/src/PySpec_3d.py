@@ -58,13 +58,26 @@ if 'dt1_subintegrations' in globals():       #|
   pass                                       #| 
 else:                                        #| 
   dt1_subintegrations = -10                  #| 
+if 'L1' in globals():                        #|
+  pass                                       #| 
+else:                                        #| 
+  L1 = 2.*np.pi                              #| 
+if 'L2' in globals():                        #|
+  pass                                       #| 
+else:                                        #| 
+  L2 = 2.*np.pi                              #| 
+if 'L3' in globals():                        #|
+  pass                                       #| 
+else:                                        #| 
+  L3 = 2.*np.pi                              #| 
+
 #==============================================
 
 # Initialize Classes. 
 #=====================================================================
 utilities = utilitiesClass()
 myFFT = FFTclass(N1,N2,N3,nthreads)
-grid = gridclass(N1,N2,N3,x,y,z,kc)
+grid = gridclass(N1,N2,N3,x,y,z,kc,L1,L2,L3)
 main = variables(weave,turb_model,rotate,Om1,Om2,Om3,grid,uhat,vhat,what,t,dt,nu,Ct,dt0,\
                  dt0_subintegrations,dt1,dt1_subintegrations,cfl,dim)
 #====================================================================

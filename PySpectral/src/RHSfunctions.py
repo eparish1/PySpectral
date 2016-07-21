@@ -137,6 +137,11 @@ def computeRHS_SMAG(main,grid,myFFT,utilities):
     main.Q[2::3,2::3,2::3] = -1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
                            1j*grid.k3*phat - main.nu*grid.ksqr*main.what + main.w0_w[:,:,:,0]
 
+    if (main.rotate == 1):
+      main.Q[0::3,0::3,0::3] = main.Q[0::3,0::3,0::3] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
+      main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
+      main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
+
 
 def computeRHS_tmodel(main,grid,myFFT,utilities):
     main.Q2U()
@@ -258,6 +263,12 @@ def computeRHS_tmodel(main,grid,myFFT,utilities):
 
     main.Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + main.w0_w[:,:,:,0]
 
+    if (main.rotate == 1):
+      main.Q[0::3,0::3,0::3] = main.Q[0::3,0::3,0::3] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
+      main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
+      main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
+
+
 def computeRHS_FM1(main,grid,myFFT,utilities):
     main.Q2U()
     ## in the t-model, do 2x padding because we want to have convolutions where 
@@ -335,6 +346,13 @@ def computeRHS_FM1(main,grid,myFFT,utilities):
     PLw = -1j*grid.k1f*uwhat - 1j*grid.k2f*vwhat - 1j*grid.k3f*wwhat - \
                                          1j*grid.k3f*phat - main.nu*grid.ksqrf*pad_2x(main.what,1)
 
+
+    if (main.rotate == 1):
+      PLu[:] = PLu[:] + 2.*(vhat_pad*main.Om3 - what_pad*main.Om2)
+      PLv[:] = PLv[:] + 2.*(what_pad*main.Om1 - uhat_pad*main.Om3)
+      PLw[:] = PLw[:] + 2.*(uhat_pad*main.Om2 - vhat_pad*main.Om1)
+
+
     PLu_p[:,:,:],PLu_q[:,:,:] = seperateModes(PLu,1)
     PLv_p[:,:,:],PLv_q[:,:,:] = seperateModes(PLv,1)
     PLw_p[:,:,:],PLw_q[:,:,:] = seperateModes(PLw,1)
@@ -391,6 +409,7 @@ def computeRHS_FM1(main,grid,myFFT,utilities):
       main.Q[term+1::main.nvars,term+1::main.nvars,term+1::main.nvars]  = -2./dt0*main.w0_v[:,:,:,i-1] + (-1.)**(i+1)*2.*main.PLQLv + sum_v
       main.Q[term+2::main.nvars,term+2::main.nvars,term+2::main.nvars]  = -2./dt0*main.w0_w[:,:,:,i-1] + (-1.)**(i+1)*2.*main.PLQLw + sum_w
       term += 3
+
 
 
 def computeRHS_FM2(main,grid,myFFT,utilities):
@@ -1226,4 +1245,10 @@ def computeRHS_DSMAG(main,grid,myFFT,utilities):
 
     main.Q[2::3,2::3,2::3] = -1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
                            1j*grid.k3*phat - main.nu*grid.ksqr*main.what + main.w0_w[:,:,:,0]
+
+    print(np.linalg.norm(Cs_sqr))
+    if (main.rotate == 1):
+      main.Q[0::3,0::3,0::3] = main.Q[0::3,0::3,0::3] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
+      main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
+      main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
 
