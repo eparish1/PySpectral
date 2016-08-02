@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import pyfftw
 import time
 import sys
 from RHSfunctions import *
@@ -84,12 +83,11 @@ while main.t <= et:
   if (main.iteration%save_freq == 0): #call the savehook routine every save_freq iterations
     myFFT.myifft3D(main.uhat,main.u)
     myFFT.myifft3D(main.vhat,main.v)
-    #myFFT.myifft3D(main.what,main.w)
-    myFFT.myifft3D(1j*grid.k1[:,None,None]*main.vhat - 1j*grid.k2[None,:,None]*main.uhat,main.w)
+    myFFT.myifft3D(main.what,main.w)
+    #myFFT.myifft3D(1j*grid.k1[:,None,None]*main.vhat - 1j*grid.k2[None,:,None]*main.uhat,main.w)
     uGlobal = allGather_physical(main.u,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
     vGlobal = allGather_physical(main.v,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
     wGlobal = allGather_physical(main.w,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
-    main.w[:,:,:] = 0.
     if (mpi_rank == 0):
       print(np.linalg.norm(uGlobal))
       string = '3DSolution/PVsol' + str(main.iteration)
@@ -97,8 +95,8 @@ while main.t <= et:
       sys.stdout.write("===================================================================================== \n")
       sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(main.t) + " \n")
       sys.stdout.flush()
-      gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
-          "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
+      #gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
+      #    "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
       np.savez(string2,u=uGlobal,v=vGlobal,w=wGlobal)
   main.iteration += 1
   advanceQ_RK4(main,grid,myFFT) 
