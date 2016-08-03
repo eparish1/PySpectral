@@ -3,8 +3,7 @@ import os
 import time
 import sys
 from RHSfunctions import *
-from Classes import gridclass, FFTclass, variables
-
+from Classes import gridclass, FFTclass, variables, utilitiesClass
 
 ## Check if variables exist
 #==============================================
@@ -54,7 +53,8 @@ else:                                        #|
 #=====================================================================
 myFFT = FFTclass(N1,N2,N3,nthreads,fft_type,Npx,Npy,num_processes,comm,mpi_rank)
 grid = gridclass(N1,N2,N3,x,y,z,kc,num_processes,L1,L2,L3,mpi_rank,comm,turb_model)
-main = variables(turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,t,dt,nu,myFFT,mpi_rank)
+main = variables(turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank)
+utilities = utilitiesClass()
 #====================================================================
 
 # Make Solution Directory if it does not exist
@@ -81,6 +81,11 @@ main.iteration = 0 #time step iteration
 #========== MAIN TIME INTEGRATION LOOP =======================
 while main.t <= et:
   if (main.iteration%save_freq == 0): #call the savehook routine every save_freq iterations
+    enstrophy,energy,dissipation,lambda_k,tau_k,Re_lambda,kspec,spectrum = utilities.computeAllStats(main,grid)
+    ktrans,transfer = utilities.computeTransfer(main,grid,myFFT)
+    ktrans,transfer_res = utilities.computeTransfer_resolved(main,grid,myFFT)
+    kspecr,spectrum_res = utilities.computeSpectrum_resolved(main,grid)
+    E_res = utilities.computeEnergy_resolved(main,grid)
     myFFT.myifft3D(main.uhat,main.u)
     myFFT.myifft3D(main.vhat,main.v)
     myFFT.myifft3D(main.what,main.w)
@@ -89,15 +94,24 @@ while main.t <= et:
     vGlobal = allGather_physical(main.v,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
     wGlobal = allGather_physical(main.w,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
     if (mpi_rank == 0):
-      print(np.linalg.norm(uGlobal))
       string = '3DSolution/PVsol' + str(main.iteration)
       string2 = '3DSolution/npsol' + str(main.iteration)
+      string3 = '3DSolution/npspec' + str(main.iteration)
       sys.stdout.write("===================================================================================== \n")
-      sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(main.t) + " \n")
+      sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(main.t) + \
+                       "   Energy = " + str(np.real(energy)) + "  eps = " + str(np.real(dissipation)) + " \n")
+      sys.stdout.write("  tau_k/dt = " + str(np.real(tau_k/main.dt)) + \
+                       "   Re_lambda = " + str(np.real(Re_lambda))   + "  lam/dx = " + \
+                       str(np.real(lambda_k/grid.dx)) +  "\n")
       sys.stdout.flush()
-      #gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
-      #    "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
+
+
+      gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
+          "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
       np.savez(string2,u=uGlobal,v=vGlobal,w=wGlobal)
+      np.savez(string3,k = kspec,spec = spectrum,kt = ktrans,T = transfer,spec_res = spectrum_res, \
+               T_res = transfer_res,Re_lambda=Re_lambda,eps=np.real(dissipation),t=main.t,Energy = \
+               energy,space_res = np.real(lambda_k/grid.dx),time_res = np.real(tau_k/main.dt))
   main.iteration += 1
   advanceQ_RK4(main,grid,myFFT) 
   main.t += main.dt
