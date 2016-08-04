@@ -34,6 +34,13 @@ class variables:
       myFFT.myifft3D(self.uhat,self.u)
       myFFT.myifft3D(self.vhat,self.v)
       myFFT.myifft3D(self.what,self.w)
+      ## retake the fft/ifft to make sure that the field is symmetric
+      myFFT.myfft3D(self.u,self.uhat)
+      myFFT.myfft3D(self.v,self.vhat)
+      myFFT.myfft3D(self.w,self.what)
+      myFFT.myifft3D(self.uhat,self.u)
+      myFFT.myifft3D(self.vhat,self.v)
+      myFFT.myifft3D(self.what,self.w)
 
     self.work_spectral = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
     #self.cfl = cfl
