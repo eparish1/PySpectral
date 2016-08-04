@@ -47,6 +47,12 @@ if 'dt1_subintegrations' in globals():       #|
   pass                                       #| 
 else:                                        #| 
   dt1_subintegrations = -10                  #| 
+if 'initDomain' in globals():                #|
+  pass                                       #| 
+else:                                        #| 
+  initDomain = 'Physical'                    #| 
+
+
 #==============================================
 
 # Initialize Classes. 
@@ -81,7 +87,7 @@ main.iteration = 0 #time step iteration
 #========== MAIN TIME INTEGRATION LOOP =======================
 while main.t <= et:
   if (main.iteration%save_freq == 0): #call the savehook routine every save_freq iterations
-    enstrophy,energy,dissipation,lambda_k,tau_k,Re_lambda,kspec,spectrum = utilities.computeAllStats(main,grid)
+    enstrophy,energy,dissipation,lambda_k,tau_k,Re_lambda,kspec,spectrum = utilities.computeAllStats(main,grid,myFFT)
     ktrans,transfer = utilities.computeTransfer(main,grid,myFFT)
     ktrans,transfer_res = utilities.computeTransfer_resolved(main,grid,myFFT)
     kspecr,spectrum_res = utilities.computeSpectrum_resolved(main,grid)
@@ -106,8 +112,8 @@ while main.t <= et:
       sys.stdout.flush()
 
 
-      gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
-          "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
+      #gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
+      #    "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
       np.savez(string2,u=uGlobal,v=vGlobal,w=wGlobal)
       np.savez(string3,k = kspec,spec = spectrum,kt = ktrans,T = transfer,spec_res = spectrum_res, \
                T_res = transfer_res,Re_lambda=Re_lambda,eps=np.real(dissipation),t=main.t,Energy = \

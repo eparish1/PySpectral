@@ -3,7 +3,7 @@ import sys
 from RHSfunctions import *
 
 class variables:
-  def __init__(self,turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank):
+  def __init__(self,turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain):
     self.turb_model = turb_model
     self.rotate = rotate
     self.Om1 = Om1
@@ -24,12 +24,16 @@ class variables:
     #self.uhat = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
     #self.vhat = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
     #self.what = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
-    #myFFT.myfft3D(self.u,self.uhat)
-    #myFFT.myfft3D(self.v,self.vhat)
-    #myFFT.myfft3D(self.w,self.what)
-    myFFT.myifft3D(self.uhat,self.u)
-    myFFT.myifft3D(self.vhat,self.v)
-    myFFT.myifft3D(self.what,self.w)
+    if (initDomain == 'Physical'):
+      print('Initializing off physical fields u,v,w')
+      myFFT.myfft3D(self.u,self.uhat)
+      myFFT.myfft3D(self.v,self.vhat)
+      myFFT.myfft3D(self.w,self.what)
+    if (initDomain == 'Fourier'):
+      print('Initializing off Fourier fields uhat,vhat,what')
+      myFFT.myifft3D(self.uhat,self.u)
+      myFFT.myifft3D(self.vhat,self.v)
+      myFFT.myifft3D(self.what,self.w)
 
     self.work_spectral = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
     #self.cfl = cfl
@@ -287,7 +291,7 @@ class utilitiesClass():
         return 0,0
 
 
-  def computeAllStats(self,main,grid):
+  def computeAllStats(self,main,grid,myFFT):
       enstrophy = self.computeEnstrophy(main,grid)
       energy = self.computeEnergy(main,grid)
       kdata,spectrum = self.computeSpectrum(main,grid)
