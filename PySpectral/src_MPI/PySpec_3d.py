@@ -59,7 +59,7 @@ else:                                        #|
 #=====================================================================
 myFFT = FFTclass(N1,N2,N3,nthreads,fft_type,Npx,Npy,num_processes,comm,mpi_rank)
 grid = gridclass(N1,N2,N3,x,y,z,kc,num_processes,L1,L2,L3,mpi_rank,comm,turb_model)
-main = variables(turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank)
+main = variables(turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain)
 utilities = utilitiesClass()
 #====================================================================
 
