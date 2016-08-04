@@ -25,12 +25,14 @@ class variables:
     #self.vhat = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
     #self.what = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
     if (initDomain == 'Physical'):
-      print('Initializing off physical fields u,v,w')
+      if (mpi_rank == 0):
+        print('Initializing off physical fields u,v,w')
       myFFT.myfft3D(self.u,self.uhat)
       myFFT.myfft3D(self.v,self.vhat)
       myFFT.myfft3D(self.w,self.what)
     if (initDomain == 'Fourier'):
-      print('Initializing off Fourier fields uhat,vhat,what')
+      if (mpi_rank == 0):
+        print('Initializing off Fourier fields uhat,vhat,what')
       myFFT.myifft3D(self.uhat,self.u)
       myFFT.myifft3D(self.vhat,self.v)
       myFFT.myifft3D(self.what,self.w)
