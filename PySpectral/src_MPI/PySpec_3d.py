@@ -111,7 +111,7 @@ while main.t <= et:
     myFFT.myifft3D(main.vhat,main.v)
     myFFT.myifft3D(main.what,main.w)
  
-    if (IO = 'serial'):
+    if (IO == 'serial'):
       uGlobal = allGather_physical(main.u,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
       vGlobal = allGather_physical(main.v,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
       wGlobal = allGather_physical(main.w,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
@@ -130,14 +130,14 @@ while main.t <= et:
 
       #gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
       #    "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
-      if (IO = 'serial'):
+      if (IO == 'serial'):
         np.savez(string2,u=uGlobal,v=vGlobal,w=wGlobal)
       np.savez(string3,k = kspec,spec = spectrum,kt = ktrans,T = transfer,spec_res = spectrum_res, \
                T_res = transfer_res,Re_lambda=Re_lambda,eps=np.real(dissipation),t=main.t,Energy = \
                energy,space_res = np.real(lambda_k/grid.dx),time_res = np.real(tau_k/main.dt), \
                Energy_res = E_res)
 
-    if (IO = 'MPI'):
+    if (IO == 'MPI'):
       string2 = solloc + '/npsol' + str(main.iteration)
       np.savez(string2,u=u,v=v,w=w)
 

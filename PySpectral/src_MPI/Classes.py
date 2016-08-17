@@ -93,6 +93,9 @@ class gridclass:
     self.x = x
     self.y = y
     self.z = z
+    self.L1 = L1
+    self.L2 = L2
+    self.L3 = L3
     #self.xG = allGather_physical(self.x,comm,mpi_rank,self.N1,self.N2,self.N3,num_processes,self.Npy)
     #self.yG = allGather_physical(self.y,comm,mpi_rank,self.N1,self.N2,self.N3,num_processes,self.Npy)
     #self.zG = allGather_physical(self.z,comm,mpi_rank,self.N1,self.N2,self.N3,num_processes,self.Npy)
@@ -229,7 +232,8 @@ class utilitiesClass():
   def computeSpectrum(self,main,grid):
 
       ##====== Compute Spectra locally ===============
-      kmag = np.sqrt(grid.k1[:,None,None]**2 + grid.k2[None,:,None]**2 + grid.k3[None,None,1::]**2)
+
+      kmag = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,1::]*grid.L3/(2.*np.pi))**2)
       E =  (2.*main.uhat[:,:,1::]*np.conj(main.uhat[:,:,1::]) ).flatten() + \
            (2.*main.vhat[:,:,1::]*np.conj(main.vhat[:,:,1::]) ).flatten() + \
            (2.*main.what[:,:,1::]*np.conj(main.what[:,:,1::]) ).flatten()
@@ -238,7 +242,7 @@ class utilitiesClass():
       kargsort = np.argsort(kmag.flatten())
       E = np.bincount(ksort,np.real(E)[kargsort])
       
-      kmag2 = np.sqrt(grid.k1[:,None,None]**2 + grid.k2[None,:,None]**2 + grid.k3[None,None,0]**2)
+      kmag2 = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,0]*grid.L3/(2.*np.pi))**2)
       E2 = (main.uhat[:,:,0]*np.conj(main.uhat[:,:,0])).flatten() + \
            (main.vhat[:,:,0]*np.conj(main.vhat[:,:,0])).flatten() + \
            (main.what[:,:,0]*np.conj(main.what[:,:,0])).flatten()
@@ -268,7 +272,7 @@ class utilitiesClass():
 
   def computeSpectrum_resolved(self,main,grid):
       ##====== Compute Spectra locally ===============
-      kmag = np.sqrt(grid.k1[:,None,None]**2 + grid.k2[None,:,None]**2 + grid.k3[None,None,1::]**2)
+      kmag = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,1::]*grid.L3/(2.*np.pi))**2)
       uFilt = grid.filter(main.uhat)
       vFilt = grid.filter(main.vhat)
       wFilt = grid.filter(main.what)
@@ -281,7 +285,7 @@ class utilitiesClass():
       kargsort = np.argsort(kmag.flatten())
       E = np.bincount(ksort,np.real(E)[kargsort])
       
-      kmag2 = np.sqrt(grid.k1[:,None,None]**2 + grid.k2[None,:,None]**2 + grid.k3[None,None,0]**2)
+      kmag2 = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,0]*grid.L3/(2.*np.pi))**2)
       E2 = (uFilt[:,:,0]*np.conj(uFilt[:,:,0])).flatten() + \
            (vFilt[:,:,0]*np.conj(vFilt[:,:,0])).flatten() + \
            (wFilt[:,:,0]*np.conj(wFilt[:,:,0])).flatten()
@@ -418,7 +422,8 @@ class utilitiesClass():
     RHSw = np.conj(grid.filter(main.what))*(myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[4] - 1j*grid.k2[None,:,None]*main.NL[5] - 1j*grid.k3[None,None,:]*main.NL[2] - \
                                          1j*grid.k3[None,None,:]*phat , grid))
 
-    kmag = np.sqrt(grid.k1[:,None,None]**2 + grid.k2[None,:,None]**2 + grid.k3[None,None,1::]**2)
+    kmag = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,1::]*grid.L3/(2.*np.pi))**2)
+
     E =  (2.*RHSu[:,:,1::]).flatten() + \
          (2.*RHSv[:,:,1::]).flatten() + \
          (2.*RHSw[:,:,1::]).flatten()
@@ -426,7 +431,7 @@ class utilitiesClass():
     kargsort = np.argsort(kmag.flatten())
     E = np.bincount(ksort,weights=np.real(E)[kargsort])
 
-    kmag2 = np.sqrt(grid.k1[:,None,None]**2 + grid.k2[None,:,None]**2 + grid.k3[None,None,0]**2)
+    kmag2 = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,0]*grid.L3/(2.*np.pi))**2)
     E2 = (RHSu[:,:,0]).flatten() + \
          (RHSv[:,:,0]).flatten() + \
          (RHSw[:,:,0]).flatten()
