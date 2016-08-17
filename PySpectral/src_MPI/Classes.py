@@ -1,9 +1,9 @@
 import numpy as np
 import sys
 from RHSfunctions import *
-
+from time_schemes import *
 class variables:
-  def __init__(self,turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain):
+  def __init__(self,turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain,time_scheme):
     self.turb_model = turb_model
     self.rotate = rotate
     self.Om1 = Om1
@@ -20,7 +20,7 @@ class variables:
     self.uhat = uhat
     self.vhat = vhat
     self.what = what
-
+    self.time_scheme = time_scheme
     #self.uhat = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
     #self.vhat = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
     #self.what = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
@@ -43,6 +43,15 @@ class variables:
       myFFT.myifft3D(self.uhat,self.u)
       myFFT.myifft3D(self.vhat,self.v)
       myFFT.myifft3D(self.what,self.w)
+
+
+    if (time_scheme == 'RK4'):
+      self.advanceQ = advanceQ_RK4
+    if (time_scheme == 'Semi-Implicit'):
+      self.advanceQ = advanceQ_SI
+      self.H = np.empty((3,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+      self.H_old = np.empty((3,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+      self.viscous_term = np.empty((3,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
 
     self.work_spectral = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
     #self.cfl = cfl
@@ -84,9 +93,9 @@ class gridclass:
     self.x = x
     self.y = y
     self.z = z
-    self.xG = allGather_physical(self.x,comm,mpi_rank,self.N1,self.N2,self.N3,num_processes,self.Npy)
-    self.yG = allGather_physical(self.y,comm,mpi_rank,self.N1,self.N2,self.N3,num_processes,self.Npy)
-    self.zG = allGather_physical(self.z,comm,mpi_rank,self.N1,self.N2,self.N3,num_processes,self.Npy)
+    #self.xG = allGather_physical(self.x,comm,mpi_rank,self.N1,self.N2,self.N3,num_processes,self.Npy)
+    #self.yG = allGather_physical(self.y,comm,mpi_rank,self.N1,self.N2,self.N3,num_processes,self.Npy)
+    #self.zG = allGather_physical(self.z,comm,mpi_rank,self.N1,self.N2,self.N3,num_processes,self.Npy)
     self.dx = x[1,0,0] - x[0,0,0]
     self.dy = y[0,1,0] - y[0,0,0]
     self.dz = z[0,0,1] - z[0,0,0]

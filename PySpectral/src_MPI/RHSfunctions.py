@@ -40,7 +40,6 @@ def computeRHS_NOSGS(main,grid,myFFT):
     myFFT.myfft3D(main.u*main.w,main.NL[4])
     myFFT.myfft3D(main.v*main.w,main.NL[5])
 
-
     phat  = grid.ksqr_i*( -grid.k1[:,None,None]*grid.k1[:,None,None]*main.NL[0] - grid.k2[None,:,None]*grid.k2[None,:,None]*main.NL[1] - \
              grid.k3[None,None,:]*grid.k3[None,None,:]*main.NL[2] - 2.*grid.k1[:,None,None]*grid.k2[None,:,None]*main.NL[3] - \
              2.*grid.k1[:,None,None]*grid.k3[None,None,:]*main.NL[4] - 2.*grid.k2[None,:,None]*grid.k3[None,None,:]*main.NL[5] )
@@ -50,20 +49,42 @@ def computeRHS_NOSGS(main,grid,myFFT):
                     grid.k2[None,:,None]*(main.what*main.Om1 - main.uhat*main.Om3) + \
                     grid.k3[None,None,:]*(main.uhat*main.Om2 - main.vhat*main.Om1))
 
-    main.Q[0] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[0] - 1j*grid.k2[None,:,None]*main.NL[3] - 1j*grid.k3[None,None,:]*main.NL[4] - \
-                                         1j*grid.k1[:,None,None]*phat - main.nu*grid.ksqr*main.uhat ,grid)
+    #==================== RK4  ====================================
+    if (main.time_scheme == 'RK4'):
+      main.Q[0] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[0] - 1j*grid.k2[None,:,None]*main.NL[3] - 1j*grid.k3[None,None,:]*main.NL[4] - \
+                                           1j*grid.k1[:,None,None]*phat - main.nu*grid.ksqr*main.uhat ,grid)
+  
+      main.Q[1] = myFFT.dealias(-1j*grid.k1[:,None,None]*main.NL[3] - 1j*grid.k2[None,:,None]*main.NL[1] - 1j*grid.k3[None,None,:]*main.NL[5] - \
+                                           1j*grid.k2[None,:,None]*phat - main.nu*grid.ksqr*main.vhat ,grid)
+  
+      main.Q[2] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[4] - 1j*grid.k2[None,:,None]*main.NL[5] - 1j*grid.k3[None,None,:]*main.NL[2] - \
+                                           1j*grid.k3[None,None,:]*phat - main.nu*grid.ksqr*main.what ,grid)
+  
+      if (main.rotate == 1):
+        main.Q[0] = main.Q[0] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
+        main.Q[1] = main.Q[1] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
+        main.Q[2] = main.Q[2] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
+    #=========================================================================
+    #================== Crank Nicolson/Adams Bashforth ==============
+    if (main.time_scheme == 'Semi-Implicit'):
+      main.H_old[:] = main.H[:]
+      main.H[0] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[0] - 1j*grid.k2[None,:,None]*main.NL[3] - 1j*grid.k3[None,None,:]*main.NL[4] - \
+                                           1j*grid.k1[:,None,None]*phat,grid)
+  
+      main.H[1] = myFFT.dealias(-1j*grid.k1[:,None,None]*main.NL[3] - 1j*grid.k2[None,:,None]*main.NL[1] - 1j*grid.k3[None,None,:]*main.NL[5] - \
+                                           1j*grid.k2[None,:,None]*phat,grid)
+  
+      main.H[2] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[4] - 1j*grid.k2[None,:,None]*main.NL[5] - 1j*grid.k3[None,None,:]*main.NL[2] - \
+                                           1j*grid.k3[None,None,:]*phat,grid)
+ 
+      main.viscous_term[0] = -main.nu*grid.ksqr*main.uhat 
+      main.viscous_term[1] = -main.nu*grid.ksqr*main.vhat 
+      main.viscous_term[2] = -main.nu*grid.ksqr*main.what 
 
-    main.Q[1] = myFFT.dealias(-1j*grid.k1[:,None,None]*main.NL[3] - 1j*grid.k2[None,:,None]*main.NL[1] - 1j*grid.k3[None,None,:]*main.NL[5] - \
-                                         1j*grid.k2[None,:,None]*phat - main.nu*grid.ksqr*main.vhat ,grid)
-
-    main.Q[2] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[4] - 1j*grid.k2[None,:,None]*main.NL[5] - 1j*grid.k3[None,None,:]*main.NL[2] - \
-                                         1j*grid.k3[None,None,:]*phat - main.nu*grid.ksqr*main.what ,grid)
-
-    if (main.rotate == 1):
-      main.Q[0] = main.Q[0] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
-      main.Q[1] = main.Q[1] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
-      main.Q[2] = main.Q[2] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
-
+      if (main.rotate == 1):
+        main.H[0] = main.H[0] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
+        main.H[1] = main.H[1] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
+        main.H[2] = main.H[2] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
 
 
 #

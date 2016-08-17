@@ -51,41 +51,56 @@ if 'initDomain' in globals():                #|
   pass                                       #| 
 else:                                        #| 
   initDomain = 'Physical'                    #| 
-
+if 'time_scheme' in globals():               #|
+  if (mpi_rank == 0):
+    print('Using ' + time_scheme )           #|
+else:                                        #| 
+  time_scheme = 'RK4'                        #| 
+  if (mpi_rank == 0):
+    print('time_scheme not specified, using RK4')  #|
+if 'IO' in globals():
+  pass
+else:
+  IO = 'MPI'
 
 #==============================================
+
+# Make Solution Directory if it does not exist
+if (mpi_rank == 0):
+  if not os.path.exists('3DSolution'):
+     os.makedirs('3DSolution')
+
 
 # Initialize Classes. 
 #=====================================================================
 myFFT = FFTclass(N1,N2,N3,nthreads,fft_type,Npx,Npy,num_processes,comm,mpi_rank)
 grid = gridclass(N1,N2,N3,x,y,z,kc,num_processes,L1,L2,L3,mpi_rank,comm,turb_model)
-main = variables(turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain)
+main = variables(turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain,time_scheme)
 utilities = utilitiesClass()
 #====================================================================
 
 # Make Solution Directory if it does not exist
-if not os.path.exists('3DSolution'):
-   os.makedirs('3DSolution')
+solloc = '3DSolution/rank_' + str(mpi_rank)
+if not os.path.exists(solloc):
+   os.makedirs(solloc)
 
 # Save the grid information
-np.savez('3DSolution/grid',k1=grid.k1,k2=grid.k2,k3=grid.k3,x=grid.x,y=grid.y,z=grid.z)
+#np.savez('3DSolution/grid',k1=grid.k1,k2=grid.k2,k3=grid.k3,x=grid.x,y=grid.y,z=grid.z)
 # Save the run information
-np.savez('3DSolution/runinfo',turb_model=turb_model,dt=dt,save_freq=save_freq,nu=nu)
+if (mpi_rank == 0):
+  np.savez('3DSolution/runinfo',turb_model=turb_model,dt=dt,save_freq=save_freq,nu=nu)
 
-#RK4 time advancement function. Note that to save memory the computeRHS 
-#function puts the RHS array into the Q array
-def advanceQ_RK4(main,grid,myFFT):
-  main.Q0[:] = main.Q[:]
-  rk4const = np.array([1./4,1./3,1./2,1.])
-  for i in range(0,4):
-    main.computeRHS(main,grid,myFFT)
-    main.Q = main.Q0 + main.dt*rk4const[i]*main.Q
 
 t0 = time.time() #start the timer
 main.U2Q() #distribute u variables to Q
 main.iteration = 0 #time step iteration
 #========== MAIN TIME INTEGRATION LOOP =======================
 while main.t <= et:
+  if (mpi_rank == 0):
+    sys.stdout.write("===================================================================================== \n")
+    sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(main.t) + "\n")
+    sys.stdout.write("===================================================================================== \n")
+    sys.stdout.flush()
   if (main.iteration%save_freq == 0): #call the savehook routine every save_freq iterations
     enstrophy,energy,dissipation,lambda_k,tau_k,Re_lambda,kspec,spectrum = utilities.computeAllStats(main,grid,myFFT)
     ktrans,transfer = utilities.computeTransfer(main,grid,myFFT)
@@ -95,10 +110,12 @@ while main.t <= et:
     myFFT.myifft3D(main.uhat,main.u)
     myFFT.myifft3D(main.vhat,main.v)
     myFFT.myifft3D(main.what,main.w)
-    #myFFT.myifft3D(1j*grid.k1[:,None,None]*main.vhat - 1j*grid.k2[None,:,None]*main.uhat,main.w)
-    uGlobal = allGather_physical(main.u,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
-    vGlobal = allGather_physical(main.v,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
-    wGlobal = allGather_physical(main.w,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
+ 
+    if (IO = 'serial'):
+      uGlobal = allGather_physical(main.u,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
+      vGlobal = allGather_physical(main.v,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
+      wGlobal = allGather_physical(main.w,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
+
     if (mpi_rank == 0):
       string = '3DSolution/PVsol' + str(main.iteration)
       string2 = '3DSolution/npsol' + str(main.iteration)
@@ -111,15 +128,22 @@ while main.t <= et:
                        str(np.real(lambda_k/grid.dx)) +  "\n")
       sys.stdout.flush()
 
-
       #gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
       #    "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
-      np.savez(string2,u=uGlobal,v=vGlobal,w=wGlobal)
+      if (IO = 'serial'):
+        np.savez(string2,u=uGlobal,v=vGlobal,w=wGlobal)
       np.savez(string3,k = kspec,spec = spectrum,kt = ktrans,T = transfer,spec_res = spectrum_res, \
                T_res = transfer_res,Re_lambda=Re_lambda,eps=np.real(dissipation),t=main.t,Energy = \
-               energy,space_res = np.real(lambda_k/grid.dx),time_res = np.real(tau_k/main.dt))
+               energy,space_res = np.real(lambda_k/grid.dx),time_res = np.real(tau_k/main.dt), \
+               Energy_res = E_res)
+
+    if (IO = 'MPI'):
+      string2 = solloc + '/npsol' + str(main.iteration)
+      np.savez(string2,u=u,v=v,w=w)
+
+
   main.iteration += 1
-  advanceQ_RK4(main,grid,myFFT) 
+  main.advanceQ(main,grid,myFFT) 
   main.t += main.dt
 
 
