@@ -142,6 +142,7 @@ class gridclass:
     self.filter = filter
 
 class FFTclass:
+
   def __init__(self,N1,N2,N3,nthreads,fft_type,Npx,Npy,num_processes,comm,mpi_rank):
     self.nthreads = nthreads
     self.Uc_hat = np.zeros((Npx,N2,N3/2+1),dtype='complex')
@@ -168,6 +169,7 @@ class FFTclass:
       uhat[:,:,:] = grid.dealias_x[:,None,None]*grid.dealias_y[None,:,None]*grid.dealias_z[None,None,:]*uhat
       return uhat 
     self.dealias = dealias
+
 
 class utilitiesClass():
   def computeEnergy(self,main,grid):
