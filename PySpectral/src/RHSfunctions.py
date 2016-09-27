@@ -49,6 +49,58 @@ def computeRHS_NOSGS(main,grid,myFFT,utilities):
       main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
       main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
 
+
+def computeRHS_Orthogonal(main,grid,myFFT,utilities):
+    main.Q2U()
+    scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
+    ureal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    vreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    wreal = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+
+    main.uhat = unpad(pad(main.uhat,1),1)
+    main.vhat = unpad(pad(main.vhat,1),1)
+    main.what = unpad(pad(main.what,1),1)
+
+    ureal[:,:,:] = myFFT.ifftT_obj(pad(main.uhat,1))*scale
+    vreal[:,:,:] = myFFT.ifftT_obj(pad(main.vhat,1))*scale
+    wreal[:,:,:] = myFFT.ifftT_obj(pad(main.what,1))*scale
+
+    uuhat = unpad( myFFT.fft_obj(ureal*ureal),1)
+    vvhat = unpad( myFFT.fft_obj(vreal*vreal),1)
+    wwhat = unpad( myFFT.fft_obj(wreal*wreal),1)
+    uvhat = unpad( myFFT.fft_obj(ureal*vreal),1)
+    uwhat = unpad( myFFT.fft_obj(ureal*wreal),1)
+    vwhat = unpad( myFFT.fft_obj(vreal*wreal),1)
+
+    #del ureal
+    #del vreal
+    #del wreal
+
+    phat  = grid.ksqr_i*( -grid.k1*grid.k1*uuhat - grid.k2*grid.k2*vvhat - \
+             grid.k3*grid.k3*wwhat - 2.*grid.k1*grid.k2*uvhat - \
+             2.*grid.k1*grid.k3*uwhat - 2.*grid.k2*grid.k3*vwhat )
+
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(main.vhat*main.Om3 - main.what*main.Om2) + 
+                    grid.k2*(main.what*main.Om1 - main.uhat*main.Om3) + \
+                    grid.k3*(main.uhat*main.Om2 - main.vhat*main.Om1))
+
+    main.Q[0::3,0::3,0::3] = -1j*grid.k1*uuhat - 1j*grid.k2*uvhat - 1j*grid.k3*uwhat - \
+                                         1j*grid.k1*phat - main.nu*grid.ksqr*main.uhat
+
+    main.Q[1::3,1::3,1::3] = -1j*grid.k1*uvhat - 1j*grid.k2*vvhat - 1j*grid.k3*vwhat - \
+                                         1j*grid.k2*phat - main.nu*grid.ksqr*main.vhat
+
+    main.Q[2::3,2::3,2::3] = -1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
+                                         1j*grid.k3*phat - main.nu*grid.ksqr*main.what
+
+    if (main.rotate == 1):
+      main.Q[0::3,0::3,0::3] = main.Q[0::3,0::3,0::3] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
+      main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
+      main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
+
+
+
 def computeRHS_SMAG(main,grid,myFFT,utilities):
     main.Q2U()
     scale = np.sqrt( (3./2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
@@ -269,7 +321,7 @@ def computeRHS_tmodel(main,grid,myFFT,utilities):
       main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
 
 
-def computeRHS_FM1(main,grid,myFFT,utilities):
+def computeRHS_staumodel(main,grid,myFFT,utilities):
     main.Q2U()
     ## in the t-model, do 2x padding because we want to have convolutions where 
     ## the modes in G support twice the modes in F.
@@ -330,11 +382,11 @@ def computeRHS_FM1(main,grid,myFFT,utilities):
              grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
              2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
 
-
     if (main.rotate == 1):
       phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqrf_i*1j*( grid.k1f*(vhat_pad*main.Om3 - what_pad*main.Om2) + 
                     grid.k2f*(what_pad*main.Om1 - uhat_pad*main.Om3) + \
                     grid.k3f*(uhat_pad*main.Om2 - vhat_pad*main.Om1))
+
 
 
     PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
@@ -345,6 +397,429 @@ def computeRHS_FM1(main,grid,myFFT,utilities):
 
     PLw = -1j*grid.k1f*uwhat - 1j*grid.k2f*vwhat - 1j*grid.k3f*wwhat - \
                                          1j*grid.k3f*phat - main.nu*grid.ksqrf*pad_2x(main.what,1)
+
+    PLu_p[:,:,:],PLu_q[:,:,:] = seperateModes(PLu,1)
+    PLv_p[:,:,:],PLv_q[:,:,:] = seperateModes(PLv,1)
+    PLw_p[:,:,:],PLw_q[:,:,:] = seperateModes(PLw,1)
+
+    PLu_qreal[:,:,:] = myFFT.ifftT_obj2(PLu_q*scale)
+    PLv_qreal[:,:,:] = myFFT.ifftT_obj2(PLv_q*scale)
+    PLw_qreal[:,:,:] = myFFT.ifftT_obj2(PLw_q*scale)
+
+    up_PLuq = unpad_2x( myFFT.fft_obj2(ureal*PLu_qreal),1)
+    vp_PLuq = unpad_2x( myFFT.fft_obj2(vreal*PLu_qreal),1)
+    wp_PLuq = unpad_2x( myFFT.fft_obj2(wreal*PLu_qreal),1)
+
+    up_PLvq = unpad_2x( myFFT.fft_obj2(ureal*PLv_qreal),1)
+    vp_PLvq = unpad_2x( myFFT.fft_obj2(vreal*PLv_qreal),1)
+    wp_PLvq = unpad_2x( myFFT.fft_obj2(wreal*PLv_qreal),1)
+
+    up_PLwq = unpad_2x( myFFT.fft_obj2(ureal*PLw_qreal),1)
+    vp_PLwq = unpad_2x( myFFT.fft_obj2(vreal*PLw_qreal),1)
+    wp_PLwq = unpad_2x( myFFT.fft_obj2(wreal*PLw_qreal),1)
+
+
+    pterm = 2.*grid.ksqr_i*( grid.k1*grid.k1*up_PLuq + grid.k2*grid.k2*vp_PLvq + grid.k3*grid.k3*wp_PLwq + \
+                          grid.k1*grid.k2*(up_PLvq + vp_PLuq) + grid.k1*grid.k3*(up_PLwq + wp_PLuq) + \
+                          grid.k2*grid.k3*(vp_PLwq + wp_PLvq) )
+
+    PLQLu = -1j*grid.k1*up_PLuq - 1j*grid.k2*vp_PLuq - 1j*grid.k3*wp_PLuq - \
+             1j*grid.k1*up_PLuq - 1j*grid.k2*up_PLvq - 1j*grid.k3*up_PLwq + \
+             1j*grid.k1*pterm
+
+    PLQLv = -1j*grid.k1*up_PLvq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*wp_PLvq - \
+             1j*grid.k1*vp_PLuq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*vp_PLwq + \
+             1j*grid.k2*pterm 
+
+    PLQLw = -1j*grid.k1*up_PLwq - 1j*grid.k2*vp_PLwq - 1j*grid.k3*wp_PLwq -\
+             1j*grid.k1*wp_PLuq - 1j*grid.k2*wp_PLvq - 1j*grid.k3*wp_PLwq + \
+             1j*grid.k3*pterm 
+
+    main.tau = main.tau_a + main.tau_b*main.t
+    tau = max(0.,main.tau)
+    #tau = 0.1
+    main.w0_u[:,:,:,0] =tau*PLQLu
+    main.w0_v[:,:,:,0] =tau*PLQLv
+    main.w0_w[:,:,:,0] =tau*PLQLw
+
+    main.Q[0::3,0::3,0::3] = unpad_2x(PLu,1) + main.w0_u[:,:,:,0]
+
+    main.Q[1::3,1::3,1::3] = unpad_2x(PLv,1) + main.w0_v[:,:,:,0]
+
+    main.Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + main.w0_w[:,:,:,0]
+
+    if (main.rotate == 1):
+      main.Q[0::3,0::3,0::3] = main.Q[0::3,0::3,0::3] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
+      main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
+      main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
+
+
+def computeRHS_Dtaumodel(main,grid,myFFT,utilities):
+    main.Q2U()
+    ## in the t-model, do 2x padding because we want to have convolutions where 
+    ## the modes in G support twice the modes in F.
+    scale = np.sqrt( (2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
+    ureal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+    vreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+    wreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+
+    ureal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    vreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    wreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+
+    PLu_qreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    PLv_qreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    PLw_qreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+
+    PLu_p = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLv_p = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLw_p = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLu_q = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLv_q = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLw_q = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+
+    main.uhat = unpad(pad(main.uhat,1),1)
+    main.vhat = unpad(pad(main.vhat,1),1)
+    main.what = unpad(pad(main.what,1),1)
+
+
+    uhat_pad = pad_2x(main.uhat,1)
+    vhat_pad = pad_2x(main.vhat,1)
+    what_pad = pad_2x(main.what,1)
+    ureal[:,:,:] = myFFT.ifftT_obj2(uhat_pad*scale)
+    vreal[:,:,:] = myFFT.ifftT_obj2(vhat_pad*scale)
+    wreal[:,:,:] = myFFT.ifftT_obj2(what_pad*scale)
+
+    uuhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    vvhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    wwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    uvhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    uwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    vwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+
+    uuhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*ureal[:,:,:])
+    vvhat[:,:,:] = myFFT.fft_obj2(vreal[:,:,:]*vreal[:,:,:])
+    wwhat[:,:,:] = myFFT.fft_obj2(wreal[:,:,:]*wreal[:,:,:])
+    uvhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*vreal[:,:,:])
+    uwhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*wreal[:,:,:])
+    vwhat[:,:,:] = myFFT.fft_obj2(vreal[:,:,:]*wreal[:,:,:])
+
+    uuhat2 = unpad_2x(uuhat,1)
+    vvhat2 = unpad_2x(vvhat,1)
+    wwhat2 = unpad_2x(wwhat,1)
+    uvhat2 = unpad_2x(uvhat,1)
+    uwhat2 = unpad_2x(uwhat,1)
+    vwhat2 = unpad_2x(vwhat,1)
+
+    phat  = -grid.k1f*grid.k1f*grid.ksqrf_i*uuhat - grid.k2f*grid.k2f*grid.ksqrf_i*vvhat - \
+             grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
+             2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
+
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqrf_i*1j*( grid.k1f*(vhat_pad*main.Om3 - what_pad*main.Om2) + 
+                    grid.k2f*(what_pad*main.Om1 - uhat_pad*main.Om3) + \
+                    grid.k3f*(uhat_pad*main.Om2 - vhat_pad*main.Om1))
+
+
+
+    PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
+                                         1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
+
+    PLv = -1j*grid.k1f*uvhat - 1j*grid.k2f*vvhat - 1j*grid.k3f*vwhat - \
+                                         1j*grid.k2f*phat - main.nu*grid.ksqrf*pad_2x(main.vhat,1)
+
+    PLw = -1j*grid.k1f*uwhat - 1j*grid.k2f*vwhat - 1j*grid.k3f*wwhat - \
+                                         1j*grid.k3f*phat - main.nu*grid.ksqrf*pad_2x(main.what,1)
+
+    PLu_p[:,:,:],PLu_q[:,:,:] = seperateModes(PLu,1)
+    PLv_p[:,:,:],PLv_q[:,:,:] = seperateModes(PLv,1)
+    PLw_p[:,:,:],PLw_q[:,:,:] = seperateModes(PLw,1)
+
+    PLu_qreal[:,:,:] = myFFT.ifftT_obj2(PLu_q*scale)
+    PLv_qreal[:,:,:] = myFFT.ifftT_obj2(PLv_q*scale)
+    PLw_qreal[:,:,:] = myFFT.ifftT_obj2(PLw_q*scale)
+
+    up_PLuq = unpad_2x( myFFT.fft_obj2(ureal*PLu_qreal),1)
+    vp_PLuq = unpad_2x( myFFT.fft_obj2(vreal*PLu_qreal),1)
+    wp_PLuq = unpad_2x( myFFT.fft_obj2(wreal*PLu_qreal),1)
+
+    up_PLvq = unpad_2x( myFFT.fft_obj2(ureal*PLv_qreal),1)
+    vp_PLvq = unpad_2x( myFFT.fft_obj2(vreal*PLv_qreal),1)
+    wp_PLvq = unpad_2x( myFFT.fft_obj2(wreal*PLv_qreal),1)
+
+    up_PLwq = unpad_2x( myFFT.fft_obj2(ureal*PLw_qreal),1)
+    vp_PLwq = unpad_2x( myFFT.fft_obj2(vreal*PLw_qreal),1)
+    wp_PLwq = unpad_2x( myFFT.fft_obj2(wreal*PLw_qreal),1)
+
+
+    pterm = 2.*grid.ksqr_i*( grid.k1*grid.k1*up_PLuq + grid.k2*grid.k2*vp_PLvq + grid.k3*grid.k3*wp_PLwq + \
+                          grid.k1*grid.k2*(up_PLvq + vp_PLuq) + grid.k1*grid.k3*(up_PLwq + wp_PLuq) + \
+                          grid.k2*grid.k3*(vp_PLwq + wp_PLvq) )
+
+    PLQLu = -1j*grid.k1*up_PLuq - 1j*grid.k2*vp_PLuq - 1j*grid.k3*wp_PLuq - \
+             1j*grid.k1*up_PLuq - 1j*grid.k2*up_PLvq - 1j*grid.k3*up_PLwq + \
+             1j*grid.k1*pterm
+
+    PLQLv = -1j*grid.k1*up_PLvq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*wp_PLvq - \
+             1j*grid.k1*vp_PLuq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*vp_PLwq + \
+             1j*grid.k2*pterm 
+
+    PLQLw = -1j*grid.k1*up_PLwq - 1j*grid.k2*vp_PLwq - 1j*grid.k3*wp_PLwq -\
+             1j*grid.k1*wp_PLuq - 1j*grid.k2*wp_PLvq - 1j*grid.k3*wp_PLwq + \
+             1j*grid.k3*pterm 
+
+    ## Now do dynamic procedure to figure out tau 
+    ureal_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    vreal_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    wreal_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+
+    PLu_qreal_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    PLv_qreal_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    PLw_qreal_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+
+    PLu_p_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLv_p_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLw_p_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLu_q_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLv_q_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLw_q_filt = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+
+
+    uhat_filt = main.test_filter(main.uhat)
+    vhat_filt = main.test_filter(main.vhat)
+    what_filt = main.test_filter(main.what)
+
+
+    uhat_pad_filt = pad_2x(uhat_filt,1)
+    vhat_pad_filt = pad_2x(vhat_filt,1)
+    what_pad_filt = pad_2x(what_filt,1)
+    ureal_filt[:] = myFFT.ifftT_obj2(uhat_pad_filt*scale)
+    vreal_filt[:] = myFFT.ifftT_obj2(vhat_pad_filt*scale)
+    wreal_filt[:] = myFFT.ifftT_obj2(what_pad_filt*scale)
+
+    uuhat_filt = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    vvhat_filt = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    wwhat_filt = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    uvhat_filt = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    uwhat_filt = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    vwhat_filt = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+
+    uuhat_filt[:,:,:] = myFFT.fft_obj2(ureal_filt[:,:,:]*ureal_filt[:,:,:])
+    vvhat_filt[:,:,:] = myFFT.fft_obj2(vreal_filt[:,:,:]*vreal_filt[:,:,:])
+    wwhat_filt[:,:,:] = myFFT.fft_obj2(wreal_filt[:,:,:]*wreal_filt[:,:,:])
+    uvhat_filt[:,:,:] = myFFT.fft_obj2(ureal_filt[:,:,:]*vreal_filt[:,:,:])
+    uwhat_filt[:,:,:] = myFFT.fft_obj2(ureal_filt[:,:,:]*wreal_filt[:,:,:])
+    vwhat_filt[:,:,:] = myFFT.fft_obj2(vreal_filt[:,:,:]*wreal_filt[:,:,:])
+
+    uuhat2_filt = unpad_2x(uuhat_filt,1)
+    vvhat2_filt = unpad_2x(vvhat_filt,1)
+    wwhat2_filt = unpad_2x(wwhat_filt,1)
+    uvhat2_filt = unpad_2x(uvhat_filt,1)
+    uwhat2_filt = unpad_2x(uwhat_filt,1)
+    vwhat2_filt = unpad_2x(vwhat_filt,1)
+
+    phat_filt  = -grid.k1f*grid.k1f*grid.ksqrf_i*uuhat_filt - grid.k2f*grid.k2f*grid.ksqrf_i*vvhat_filt - \
+             grid.k3f*grid.k3f*grid.ksqrf_i*wwhat_filt - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat_filt - \
+             2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat_filt - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat_filt
+
+    if (main.rotate == 1):
+      phat_filt[:,:,:] = phat_filt[:,:,:] - 2.*grid.ksqrf_i*1j*( grid.k1f*(vhat_pad_filt*main.Om3 - what_pad_filt*main.Om2) + 
+                    grid.k2f*(what_pad_filt*main.Om1 - uhat_pad_filt*main.Om3) + \
+                    grid.k3f*(uhat_pad_filt*main.Om2 - vhat_pad_filt*main.Om1))
+
+
+
+    PLu_filt = -1j*grid.k1f*uuhat_filt - 1j*grid.k2f*uvhat_filt - 1j*grid.k3f*uwhat_filt - \
+                                         1j*grid.k1f*phat_filt - main.nu*grid.ksqrf*pad_2x(uhat_filt,1)
+
+    PLv_filt = -1j*grid.k1f*uvhat_filt - 1j*grid.k2f*vvhat_filt - 1j*grid.k3f*vwhat_filt - \
+                                         1j*grid.k2f*phat_filt - main.nu*grid.ksqrf*pad_2x(vhat_filt,1)
+
+    PLw_filt = -1j*grid.k1f*uwhat_filt - 1j*grid.k2f*vwhat_filt - 1j*grid.k3f*wwhat_filt - \
+                                         1j*grid.k3f*phat_filt - main.nu*grid.ksqrf*pad_2x(what_filt,1)
+
+    PLu_p_filt[:],PLu_q_filt[:] = seperateModes_testFilter(PLu_filt,main)
+    PLv_p_filt[:],PLv_q_filt[:] = seperateModes_testFilter(PLv_filt,main)
+    PLw_p_filt[:],PLw_q_filt[:] = seperateModes_testFilter(PLw_filt,main)
+
+    PLu_qreal_filt[:] = myFFT.ifftT_obj2(PLu_q_filt*scale)
+    PLv_qreal_filt[:] = myFFT.ifftT_obj2(PLv_q_filt*scale)
+    PLw_qreal_filt[:] = myFFT.ifftT_obj2(PLw_q_filt*scale)
+
+    up_PLuq_filt = unpad_2x( myFFT.fft_obj2(ureal_filt*PLu_qreal_filt),1)
+    vp_PLuq_filt = unpad_2x( myFFT.fft_obj2(vreal_filt*PLu_qreal_filt),1)
+    wp_PLuq_filt = unpad_2x( myFFT.fft_obj2(wreal_filt*PLu_qreal_filt),1)
+
+    up_PLvq_filt = unpad_2x( myFFT.fft_obj2(ureal_filt*PLv_qreal_filt),1)
+    vp_PLvq_filt = unpad_2x( myFFT.fft_obj2(vreal_filt*PLv_qreal_filt),1)
+    wp_PLvq_filt = unpad_2x( myFFT.fft_obj2(wreal_filt*PLv_qreal_filt),1)
+
+    up_PLwq_filt = unpad_2x( myFFT.fft_obj2(ureal_filt*PLw_qreal_filt),1)
+    vp_PLwq_filt = unpad_2x( myFFT.fft_obj2(vreal_filt*PLw_qreal_filt),1)
+    wp_PLwq_filt = unpad_2x( myFFT.fft_obj2(wreal_filt*PLw_qreal_filt),1)
+
+
+    pterm_filt = 2.*grid.ksqr_i*( grid.k1*grid.k1*up_PLuq_filt + grid.k2*grid.k2*vp_PLvq_filt + grid.k3*grid.k3*wp_PLwq_filt + \
+                          grid.k1*grid.k2*(up_PLvq_filt + vp_PLuq_filt) + grid.k1*grid.k3*(up_PLwq_filt + wp_PLuq_filt) + \
+                          grid.k2*grid.k3*(vp_PLwq_filt + wp_PLvq_filt) )
+
+    PLQLu_filt = -1j*grid.k1*up_PLuq_filt - 1j*grid.k2*vp_PLuq_filt - 1j*grid.k3*wp_PLuq_filt - \
+             1j*grid.k1*up_PLuq_filt - 1j*grid.k2*up_PLvq_filt - 1j*grid.k3*up_PLwq_filt + \
+             1j*grid.k1*pterm_filt
+
+    PLQLv_filt = -1j*grid.k1*up_PLvq_filt - 1j*grid.k2*vp_PLvq_filt - 1j*grid.k3*wp_PLvq_filt - \
+             1j*grid.k1*vp_PLuq_filt - 1j*grid.k2*vp_PLvq_filt - 1j*grid.k3*vp_PLwq_filt + \
+             1j*grid.k2*pterm_filt 
+
+    PLQLw_filt = -1j*grid.k1*up_PLwq_filt - 1j*grid.k2*vp_PLwq_filt - 1j*grid.k3*wp_PLwq_filt -\
+             1j*grid.k1*wp_PLuq_filt - 1j*grid.k2*wp_PLvq_filt - 1j*grid.k3*wp_PLwq_filt + \
+             1j*grid.k3*pterm_filt 
+
+    ## Now compute Leonard stress
+    Lu = main.test_filter_2x( -1j*grid.k1f*uuhat      - 1j*grid.k2f*uvhat      - 1j*grid.k3f*uwhat      + 1j*grid.k1f*phat) - \
+                           main.test_filter_2x ( -1j*grid.k1f*uuhat_filt - 1j*grid.k2f*uvhat_filt - 1j*grid.k3f*uwhat_filt + 1j*grid.k1f*phat_filt)
+    Lv = main.test_filter_2x( -1j*grid.k1f*uvhat      - 1j*grid.k2f*vvhat      - 1j*grid.k3f*vwhat      + 1j*grid.k2f*phat) - \
+                           main.test_filter_2x ( -1j*grid.k1f*uvhat_filt - 1j*grid.k2f*vvhat_filt - 1j*grid.k3f*vwhat_filt + 1j*grid.k2f*phat_filt)
+    Lw = main.test_filter_2x( -1j*grid.k1f*uwhat      - 1j*grid.k2f*vwhat      - 1j*grid.k3f*wwhat      + 1j*grid.k3f*phat) - \
+                           main.test_filter_2x ( -1j*grid.k1f*uwhat_filt - 1j*grid.k2f*vwhat_filt - 1j*grid.k3f*wwhat_filt + 1j*grid.k3f*phat_filt)
+
+    ## Now compute energy up to test filter
+    LE =(np.sum(Lu[:,:,1:grid.N3/2]*np.conj(uhat_pad_filt[:,:,1:grid.N3/2]*2) ) + \
+         np.sum(Lu[:,:,0]*np.conj(uhat_pad_filt[:,:,0])) + \
+         np.sum(Lv[:,:,1:grid.N3/2]*np.conj(vhat_pad_filt[:,:,1:grid.N3/2]*2) ) + \
+         np.sum(Lv[:,:,0]*np.conj(vhat_pad_filt[:,:,0])) + \
+         np.sum(Lw[:,:,1:grid.N3/2]*np.conj(what_pad_filt[:,:,1:grid.N3/2]*2) ) + \
+         np.sum(Lw[:,:,0]*np.conj(what_pad_filt[:,:,0])) )/(grid.N1*grid.N2*grid.N3)
+
+    filt_PLQLu_filt = main.test_filter(PLQLu_filt)
+    filt_PLQLv_filt = main.test_filter(PLQLv_filt)
+    filt_PLQLw_filt = main.test_filter(PLQLw_filt)
+
+
+    PLQLE_filt = (\
+         np.sum(filt_PLQLu_filt[:,:,1:grid.N3/2]*np.conj(uhat_filt[:,:,1:grid.N3/2]*2) ) + \
+         np.sum(filt_PLQLu_filt[:,:,0]*np.conj(uhat_filt[:,:,0])) + \
+         np.sum(filt_PLQLv_filt[:,:,1:grid.N3/2]*np.conj(vhat_filt[:,:,1:grid.N3/2]*2) ) + \
+         np.sum(filt_PLQLv_filt[:,:,0]*np.conj(vhat_filt[:,:,0])) + \
+         np.sum(filt_PLQLw_filt[:,:,1:grid.N3/2]*np.conj(what_filt[:,:,1:grid.N3/2]*2) ) + \
+         np.sum(filt_PLQLw_filt[:,:,0]*np.conj(what_filt[:,:,0])) ) / (grid.N1*grid.N2*grid.N3)
+
+    filt_PLQLu = main.test_filter(PLQLu)
+    filt_PLQLv = main.test_filter(PLQLv)
+    filt_PLQLw = main.test_filter(PLQLw)
+
+    filt_PLQLE = (\
+         np.sum(PLQLu[:,:,1:grid.N3/2]*np.conj(uhat_filt[:,:,1:grid.N3/2]*2) ) + \
+         np.sum(PLQLu[:,:,0]*np.conj(uhat_filt[:,:,0])) + \
+         np.sum(PLQLv[:,:,1:grid.N3/2]*np.conj(vhat_filt[:,:,1:grid.N3/2]*2) ) + \
+         np.sum(PLQLv[:,:,0]*np.conj(vhat_filt[:,:,0])) + \
+         np.sum(PLQLw[:,:,1:grid.N3/2]*np.conj(what_filt[:,:,1:grid.N3/2]*2) ) + \
+         np.sum(PLQLw[:,:,0]*np.conj(what_filt[:,:,0])) ) / (grid.N1*grid.N2*grid.N3)
+    print('LE = ' + str(np.linalg.norm(LE)))
+#    tau =  np.real( LE ) / (np.real(PLQLE_filt)  - np.real(filt_PLQLE) )
+#    tau =  np.real( LE ) / (np.real((grid.kc**2/main.kf**2)*PLQLE_filt)  - np.real(filt_PLQLE) + 1.e-5 )
+#    tau =  np.abs( LE ) / (np.abs((grid.kc**2/main.kf**2)*PLQLE_filt)  - np.abs(filt_PLQLE) + 1.e-5 )
+    tau =  np.abs( LE ) / (np.abs(PLQLE_filt)  - np.abs(filt_PLQLE) + 1.e-5 )
+
+    main.tau = tau
+    print('tau =' + str(tau))
+    tau = max(0.,tau)
+    #tau = 0.1
+    main.w0_u[:,:,:,0] =tau*PLQLu
+    main.w0_v[:,:,:,0] =tau*PLQLv
+    main.w0_w[:,:,:,0] =tau*PLQLw
+
+    #print(np.linalg.norm(filt_PLQLE))
+
+    main.Q[0::3,0::3,0::3] = unpad_2x(PLu,1) + main.w0_u[:,:,:,0]
+
+    main.Q[1::3,1::3,1::3] = unpad_2x(PLv,1) + main.w0_v[:,:,:,0]
+
+    main.Q[2::3,2::3,2::3] = unpad_2x(PLw,1) + main.w0_w[:,:,:,0]
+
+    if (main.rotate == 1):
+      main.Q[0::3,0::3,0::3] = main.Q[0::3,0::3,0::3] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
+      main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
+      main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
+
+
+
+def computeRHS_FM1(main,grid,myFFT,utilities):
+    main.Q2U()
+    ## in the t-model, do 2x padding because we want to have convolutions where 
+    ## the modes in G support twice the modes in F.
+    scale = np.sqrt( (2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
+    ureal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+    vreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+    wreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+
+    ureal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    vreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    wreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+
+    PLu_qreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    PLv_qreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+    PLw_qreal = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+
+    PLu_p = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLv_p = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLw_p = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLu_q = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLv_q = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+    PLw_q = np.zeros( (int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+
+    main.uhat = unpad(pad(main.uhat,1),1)
+    main.vhat = unpad(pad(main.vhat,1),1)
+    main.what = unpad(pad(main.what,1),1)
+
+
+    uhat_pad = pad_2x_var(main.uhat,1)
+    vhat_pad = pad_2x_var(main.vhat,1)
+    what_pad = pad_2x_var(main.what,1)
+    ureal[:,:,:] = myFFT.ifftT_obj2(uhat_pad*scale)
+    vreal[:,:,:] = myFFT.ifftT_obj2(vhat_pad*scale)
+    wreal[:,:,:] = myFFT.ifftT_obj2(what_pad*scale)
+
+    uuhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    vvhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    wwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    uvhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    uwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+    vwhat = np.zeros((2*grid.N1,2*grid.N2,grid.N3+1),dtype = 'complex')
+
+    uuhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*ureal[:,:,:])
+    vvhat[:,:,:] = myFFT.fft_obj2(vreal[:,:,:]*vreal[:,:,:])
+    wwhat[:,:,:] = myFFT.fft_obj2(wreal[:,:,:]*wreal[:,:,:])
+    uvhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*vreal[:,:,:])
+    uwhat[:,:,:] = myFFT.fft_obj2(ureal[:,:,:]*wreal[:,:,:])
+    vwhat[:,:,:] = myFFT.fft_obj2(vreal[:,:,:]*wreal[:,:,:])
+
+    uuhat2 = unpad_2x(uuhat,1)
+    vvhat2 = unpad_2x(vvhat,1)
+    wwhat2 = unpad_2x(wwhat,1)
+    uvhat2 = unpad_2x(uvhat,1)
+    uwhat2 = unpad_2x(uwhat,1)
+    vwhat2 = unpad_2x(vwhat,1)
+
+    phat  = -grid.k1f*grid.k1f*grid.ksqrf_i*uuhat - grid.k2f*grid.k2f*grid.ksqrf_i*vvhat - \
+             grid.k3f*grid.k3f*grid.ksqrf_i*wwhat - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*uvhat - \
+             2.*grid.k1f*grid.k3f*grid.ksqrf_i*uwhat - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*vwhat
+
+
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqrf_i*1j*( grid.k1f*(vhat_pad*main.Om3 - what_pad*main.Om2) + 
+                    grid.k2f*(what_pad*main.Om1 - uhat_pad*main.Om3) + \
+                    grid.k3f*(uhat_pad*main.Om2 - vhat_pad*main.Om1))
+
+
+    PLu = -1j*grid.k1f*uuhat - 1j*grid.k2f*uvhat - 1j*grid.k3f*uwhat - \
+                                         1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x_var(main.uhat,1)
+
+    PLv = -1j*grid.k1f*uvhat - 1j*grid.k2f*vvhat - 1j*grid.k3f*vwhat - \
+                                         1j*grid.k2f*phat - main.nu*grid.ksqrf*pad_2x_var(main.vhat,1)
+
+    PLw = -1j*grid.k1f*uwhat - 1j*grid.k2f*vwhat - 1j*grid.k3f*wwhat - \
+                                         1j*grid.k3f*phat - main.nu*grid.ksqrf*pad_2x_var(main.what,1)
 
 
     if (main.rotate == 1):
@@ -1085,7 +1560,7 @@ def computeRHS_DSMAG(main,grid,myFFT,utilities):
     #### Dynamic Smagorinsky Contribution
     ## First Need to compute Leonard Stress. Apply test filter at scale k_L
     ## k_c = DSmag_alpha*k_L
-    kL = main.kc/DSmag_alpha
+    kL = (grid.kc)/DSmag_alpha
     uhatF = utilities.myFilter(main.uhat,kL)
     vhatF = utilities.myFilter(main.vhat,kL)
     whatF = utilities.myFilter(main.what,kL)
@@ -1208,7 +1683,6 @@ def computeRHS_DSMAG(main,grid,myFFT,utilities):
     den = Mreal[:,:,:,0]*Mreal[:,:,:,0]  + Mreal[:,:,:,1]*Mreal[:,:,:,1] + Mreal[:,:,:,2]*Mreal[:,:,:,2] + \
           Mreal[:,:,:,3]*Mreal[:,:,:,3]  + Mreal[:,:,:,4]*Mreal[:,:,:,4] + Mreal[:,:,:,5]*Mreal[:,:,:,5]
     Cs_sqr = np.mean(num)/np.mean(den)
-
     nutreal = Cs_sqr*grid.Delta*grid.Delta*np.abs(S_magreal)
     
     tau11real = -2.*nutreal*S11real
@@ -1246,7 +1720,6 @@ def computeRHS_DSMAG(main,grid,myFFT,utilities):
     main.Q[2::3,2::3,2::3] = -1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
                            1j*grid.k3*phat - main.nu*grid.ksqr*main.what + main.w0_w[:,:,:,0]
 
-    print(np.linalg.norm(Cs_sqr))
     if (main.rotate == 1):
       main.Q[0::3,0::3,0::3] = main.Q[0::3,0::3,0::3] + 2.*(main.vhat*main.Om3 - main.what*main.Om2)
       main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)

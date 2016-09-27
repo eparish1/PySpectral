@@ -106,6 +106,109 @@ class variables:
       self.Q2U = Q2U
       self.U2Q = U2Q 
     ##=============================================
+    ##============ tau-model ========================
+    if (turb_model == 'Dynamic tau-model'):
+      print('Using the dynamic tau-model')
+      self.kf = int(grid.kc/2.)
+      self.testfilt_k1 = np.ones(grid.N1)
+      self.testfilt_k2 = np.ones(grid.N2)
+      self.testfilt_k3 = np.ones(grid.N3/2+1)
+      for i in range(0,grid.N1):
+        if (abs(grid.k1[i,0,0]) >= self.kf):
+          self.testfilt_k1[i] = 0.
+ 
+      for i in range(0,grid.N2):
+        if (abs(grid.k2[0,i,0]) >= self.kf):
+          self.testfilt_k2[i] = 0.
+
+      for i in range(0,grid.N3/2+1):
+        if (abs(grid.k3[0,0,i]) >= self.kf):
+          self.testfilt_k3[i] = 0.
+
+      def test_filter(uhat):
+        ufilter = self.testfilt_k1[:,None,None]*self.testfilt_k2[None,:,None]*self.testfilt_k3[None,None,:]*uhat
+        return ufilter
+      self.test_filter = test_filter
+
+      self.testfilt_k1_2x = np.ones(grid.N1*2)
+      self.testfilt_k2_2x = np.ones(grid.N2*2)
+      self.testfilt_k3_2x = np.ones(grid.N3+1)
+      for i in range(0,grid.N1*2):
+        if (abs(grid.k1f[i,0,0]) >= self.kf):
+          self.testfilt_k1_2x[i] = 0.
+ 
+      for i in range(0,grid.N2*2):
+        if (abs(grid.k2f[0,i,0]) >= self.kf):
+          self.testfilt_k2_2x[i] = 0.
+
+      for i in range(0,grid.N3+1):
+        if (abs(grid.k3f[0,0,i]) >= self.kf):
+          self.testfilt_k3_2x[i] = 0.
+
+      def test_filter_2x(uhat_pad):
+        ufilter = self.testfilt_k1_2x[:,None,None]*self.testfilt_k2_2x[None,:,None]*self.testfilt_k3_2x[None,None,:]*uhat_pad
+        return ufilter
+      self.test_filter_2x = test_filter_2x
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.Q = np.zeros( (3*grid.N1,3*grid.N2,3*(grid.N3/2+1)),dtype='complex')
+      self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+      self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+      self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      def U2Q():
+        self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+        self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+        self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0::3,0::3,0::3]
+        self.vhat[:,:,:] = self.Q[1::3,1::3,1::3]
+        self.what[:,:,:] = self.Q[2::3,2::3,2::3]
+      self.computeRHS = computeRHS_Dtaumodel
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+
+
+    ##============ tau-model ========================
+    if (turb_model == 'Static tau-model'):
+      print('Using the static tau-model')
+      self.tau_a = dt0
+      self.tau_b = dt1
+      print('tau = ' + str(self.tau_a) + ' t * ' + str(self.tau_b) )
+      self.kf = int(grid.kc/2.)
+      self.testfilt_k1 = np.ones(grid.N1)
+      self.testfilt_k2 = np.ones(grid.N2)
+      self.testfilt_k3 = np.ones(grid.N3/2+1)
+      for i in range(0,grid.N1):
+        if (abs(grid.k1[i,0,0]) >= self.kf):
+          self.testfilt_k1[i] = 0.
+ 
+      for i in range(0,grid.N2):
+        if (abs(grid.k2[0,i,0]) >= self.kf):
+          self.testfilt_k2[i] = 0.
+
+      for i in range(0,grid.N3/2+1):
+        if (abs(grid.k3[0,0,i]) >= self.kf):
+          self.testfilt_k3[i] = 0.
+      self.w0_u = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_v = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.w0_w = np.zeros( (grid.N1,grid.N2,(grid.N3/2+1),1),dtype='complex')
+      self.Q = np.zeros( (3*grid.N1,3*grid.N2,3*(grid.N3/2+1)),dtype='complex')
+      self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+      self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+      self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      def U2Q():
+        self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+        self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+        self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0::3,0::3,0::3]
+        self.vhat[:,:,:] = self.Q[1::3,1::3,1::3]
+        self.what[:,:,:] = self.Q[2::3,2::3,2::3]
+      self.computeRHS = computeRHS_staumodel
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+    ##=============================================
 
     ##============ FM1 model ========================
     if (turb_model == 3):
@@ -457,7 +560,8 @@ class gridclass:
     self.ksqrf = self.k1f*self.k1f + self.k2f*self.k2f + self.k3f*self.k3f + 1.e-50
     self.ksqrf_i = 1./self.ksqrf
     self.kc = kc
-    self.Delta = np.pi/self.kc
+    vol = (self.dx*self.dy*self.dz)**(1./3.)
+    self.Delta = vol
     self.Gf = np.zeros(np.shape(self.k1)) #Sharp Spectral cutoff (we cutoff the oddball frequency)
     self.Gf[0:self.kc,0:self.kc,0:self.kc] = 1 # get first quardants
     self.Gf[0:self.kc,self.N2-self.kc+1::,0:self.kc] = 1 #0:kc in k1 and -kc:0 in k2

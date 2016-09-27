@@ -78,6 +78,30 @@ class variables:
       self.Q2U = Q2U
       self.U2Q = U2Q 
     ##=============================================
+    ##============ ORTHOGONAL DYNAMICS MODE ========================
+    if (turb_model == 'Orthogonal Dynamics'):
+      if (mpi_rank == 0):
+        sys.stdout.write('Solving the orthogonal dynamics equation \n')
+        sys.stdout.flush()
+      self.Q = np.zeros( (3,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.Q0 = np.zeros( (3,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.F = np.zeros( (3,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.nvars = 3
+      self.Q[0] = self.uhat[:,:,:]
+      self.Q[1] = self.vhat[:,:,:]
+      self.Q[2] = self.what[:,:,:]
+      def U2Q():
+        self.Q[0] = self.uhat[:,:,:]
+        self.Q[1] = self.vhat[:,:,:]
+        self.Q[2] = self.what[:,:,:]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0]
+        self.vhat[:,:,:] = self.Q[1]
+        self.what[:,:,:] = self.Q[2]
+      self.computeRHS = computeRHS_Ortho
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+    ##=============================================
 
 
 class gridclass:
@@ -260,7 +284,7 @@ class utilitiesClass():
       if (grid.mpi_rank == 0):
         kmax = np.round(np.sqrt((grid.N1/2)**2 + (grid.N2/2)**2 + (grid.N3/2)**2) )
         kspec = np.linspace(0 , kmax, kmax + 1)
-        spectrum = np.zeros(kmax+1)
+        spectrum = np.zeros(int(kmax+1))
         for j in range(0,grid.num_processes):
           spectrum[0:k_all[j]] = spectrum[0:k_all[j]] + E_all[j][:]
           spectrum[0:k_all2[j]] = spectrum[0:k_all2[j]] + E_all2[j][:]
@@ -303,7 +327,7 @@ class utilitiesClass():
       if (grid.mpi_rank == 0):
         kmax = np.round(np.sqrt((grid.N1/2)**2 + (grid.N2/2)**2 + (grid.N3/2)**2) )
         kspec = np.linspace(0 , kmax, kmax + 1)
-        spectrum = np.zeros(kmax+1)
+        spectrum = np.zeros(int(kmax+1))
         for j in range(0,grid.num_processes):
           spectrum[0:k_all[j]] = spectrum[0:k_all[j]] + E_all[j][:]
           spectrum[0:k_all2[j]] = spectrum[0:k_all2[j]] + E_all2[j][:]
@@ -381,7 +405,7 @@ class utilitiesClass():
     if (grid.mpi_rank == 0):
       kmax = np.round(np.sqrt((grid.N1/2)**2 + (grid.N2/2)**2 + (grid.N3/2)**2) )
       kspec = np.linspace(0 , kmax, kmax + 1)
-      transfer = np.zeros(kmax+1)
+      transfer = np.zeros(int(kmax+1))
       for j in range(0,grid.num_processes):
         transfer[0:k_all[j]] = transfer[0:k_all[j]] + E_all[j][:]
         transfer[0:k_all2[j]] = transfer[0:k_all2[j]] + E_all2[j][:]
@@ -449,7 +473,7 @@ class utilitiesClass():
     if (grid.mpi_rank == 0):
       kmax = np.round(np.sqrt((grid.N1/2)**2 + (grid.N2/2)**2 + (grid.N3/2)**2) )
       kspec = np.linspace(0 , kmax, kmax + 1)
-      transfer = np.zeros(kmax+1)
+      transfer = np.zeros(int(kmax+1))
       for j in range(0,grid.num_processes):
         transfer[0:k_all[j]] = transfer[0:k_all[j]] + E_all[j][:]
         transfer[0:k_all2[j]] = transfer[0:k_all2[j]] + E_all2[j][:]
