@@ -99,6 +99,48 @@ def computeRHS_Orthogonal(main,grid,myFFT,utilities):
       main.Q[1::3,1::3,1::3] = main.Q[1::3,1::3,1::3] + 2.*(main.what*main.Om1 - main.uhat*main.Om3)
       main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
 
+    ureal_f = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    vreal_f = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+    wreal_f = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
+
+    uhat_f = grid.filter(main.uhat)
+    vhat_f = grid.filter(main.vhat)
+    what_f = grid.filter(main.what)
+
+    ureal_f[:,:,:] = myFFT.ifftT_obj(pad(uhat_f,1))*scale
+    vreal_f[:,:,:] = myFFT.ifftT_obj(pad(vhat_f,1))*scale
+    wreal_f[:,:,:] = myFFT.ifftT_obj(pad(what_f,1))*scale
+
+    uuhat = unpad( myFFT.fft_obj(ureal_f*ureal_f),1)
+    vvhat = unpad( myFFT.fft_obj(vreal_f*vreal_f),1)
+    wwhat = unpad( myFFT.fft_obj(wreal_f*wreal_f),1)
+    uvhat = unpad( myFFT.fft_obj(ureal_f*vreal_f),1)
+    uwhat = unpad( myFFT.fft_obj(ureal_f*wreal_f),1)
+    vwhat = unpad( myFFT.fft_obj(vreal_f*wreal_f),1)
+
+
+    phat  = grid.ksqr_i*( -grid.k1*grid.k1*uuhat - grid.k2*grid.k2*vvhat - \
+             grid.k3*grid.k3*wwhat - 2.*grid.k1*grid.k2*uvhat - \
+             2.*grid.k1*grid.k3*uwhat - 2.*grid.k2*grid.k3*vwhat )
+
+    if (main.rotate == 1):
+      phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqr_i*1j*( grid.k1*(vhat_f*main.Om3 - what_f*main.Om2) + 
+                    grid.k2*(what_f*main.Om1 - uhat_f*main.Om3) + \
+                    grid.k3*(uhat_f*main.Om2 - vhat_f*main.Om1))
+
+    main.Q[0::3,0::3,0::3] -= -1j*grid.k1*uuhat - 1j*grid.k2*uvhat - 1j*grid.k3*uwhat - \
+                                         1j*grid.k1*phat - main.nu*grid.ksqr*uhat_f
+
+    main.Q[1::3,1::3,1::3] -= -1j*grid.k1*uvhat - 1j*grid.k2*vvhat - 1j*grid.k3*vwhat - \
+                                         1j*grid.k2*phat - main.nu*grid.ksqr*vhat_f
+
+    main.Q[2::3,2::3,2::3] -= -1j*grid.k1*uwhat - 1j*grid.k2*vwhat - 1j*grid.k3*wwhat - \
+                                         1j*grid.k3*phat - main.nu*grid.ksqr*what_f
+
+    if (main.rotate == 1):
+      main.Q[0::3,0::3,0::3] -= 2.*(vhat_f*main.Om3 - what_f*main.Om2)
+      main.Q[1::3,1::3,1::3] -= 2.*(what_f*main.Om1 - uhat_f*main.Om3)
+      main.Q[2::3,2::3,2::3] -= 2.*(uhat_f*main.Om2 - vhat_f*main.Om1)
 
 
 def computeRHS_SMAG(main,grid,myFFT,utilities):
