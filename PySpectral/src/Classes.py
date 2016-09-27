@@ -69,6 +69,8 @@ class variables:
         self.vhat[:,:,:] = self.Q[1::3,1::3,1::3]
         self.what[:,:,:] = self.Q[2::3,2::3,2::3]
       self.computeRHS = computeRHS_Orthogonal
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
     ##=============================================
 
     ##============ SMAGORINSKY ====================
