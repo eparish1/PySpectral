@@ -53,6 +53,23 @@ class variables:
       self.Q2U = Q2U
       self.U2Q = U2Q 
     ##=============================================
+    if (turb_model == 'Orthogonal Dynamics'):
+      sys.stdout.write('Solving the orthogonal dynamics \n')
+      self.Q = np.zeros( (3*grid.N1,3*grid.N2,3*(grid.N3/2+1)),dtype='complex')
+      self.nvars = 3
+      self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+      self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+      self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      def U2Q():
+        self.Q[0::3,0::3,0::3] = self.uhat[:,:,:]
+        self.Q[1::3,1::3,1::3] = self.vhat[:,:,:]
+        self.Q[2::3,2::3,2::3] = self.what[:,:,:]
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0::3,0::3,0::3]
+        self.vhat[:,:,:] = self.Q[1::3,1::3,1::3]
+        self.what[:,:,:] = self.Q[2::3,2::3,2::3]
+      self.computeRHS = computeRHS_Orthogonal
+    ##=============================================
 
     ##============ SMAGORINSKY ====================
     if (turb_model == 1):
