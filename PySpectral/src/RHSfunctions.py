@@ -103,9 +103,9 @@ def computeRHS_Orthogonal(main,grid,myFFT,utilities):
     vreal_f = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
     wreal_f = np.zeros( (int(3./2.*grid.N1),int(3./2.*grid.N2),int(3./2.*grid.N3)) )
 
-    uhat_f = grid.filter(main.uhat)
-    vhat_f = grid.filter(main.vhat)
-    what_f = grid.filter(main.what)
+    uhat_f = grid.Gf*main.uhat
+    vhat_f = grid.Gf*main.vhat
+    what_f = grid.Gf*main.what
 
     ureal_f[:,:,:] = myFFT.ifftT_obj(pad(uhat_f,1))*scale
     vreal_f[:,:,:] = myFFT.ifftT_obj(pad(vhat_f,1))*scale
