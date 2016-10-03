@@ -144,7 +144,7 @@ while main.t <= et:
     if (IO == 'MPI'):
       string2 = solloc + '/npsol' + str(main.iteration)
       if (main.turb_model == 'Orthogonal Dynamics'):
-        np.savez(string2,u=u,v=v,w=w,F = main.F)
+        np.savez(string2,u=u,v=v,w=w,F = main.F/eps)
       else:
         np.savez(string2,u=u,v=v,w=w,w0_u=w0_u,w0_v=w0_v,w0_w=w0_w)
 
