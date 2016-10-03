@@ -63,12 +63,16 @@ if 'IO' in globals():
 else:
   IO = 'MPI'
 
+if 'folderLoc' in globals():
+  pass
+else:
+  folderLoc = '3DSolution'
 #==============================================
 
 # Make Solution Directory if it does not exist
 if (mpi_rank == 0):
-  if not os.path.exists('3DSolution'):
-     os.makedirs('3DSolution')
+  if not os.path.exists(folderLoc):
+     os.makedirs(folderLoc)
 
 
 # Initialize Classes. 
@@ -80,7 +84,7 @@ utilities = utilitiesClass()
 #====================================================================
 
 # Make Solution Directory if it does not exist
-solloc = '3DSolution/rank_' + str(mpi_rank)
+solloc = folderLoc + '/rank_' + str(mpi_rank)
 if not os.path.exists(solloc):
    os.makedirs(solloc)
 
@@ -88,7 +92,8 @@ if not os.path.exists(solloc):
 #np.savez('3DSolution/grid',k1=grid.k1,k2=grid.k2,k3=grid.k3,x=grid.x,y=grid.y,z=grid.z)
 # Save the run information
 if (mpi_rank == 0):
-  np.savez('3DSolution/runinfo',turb_model=turb_model,dt=dt,save_freq=save_freq,nu=nu)
+  string = folderLoc + '/runinfo'
+  np.savez(string,turb_model=turb_model,dt=dt,save_freq=save_freq,nu=nu)
 
 
 t0 = time.time() #start the timer
@@ -117,9 +122,9 @@ while main.t <= et:
       wGlobal = allGather_physical(main.w,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
 
     if (mpi_rank == 0):
-      string = '3DSolution/PVsol' + str(main.iteration)
-      string2 = '3DSolution/npsol' + str(main.iteration)
-      string3 = '3DSolution/npspec' + str(main.iteration)
+      string  = folderLoc + '/PVsol' + str(main.iteration)
+      string2 = folderLoc + '/npsol' + str(main.iteration)
+      string3 = folderLoc + '/npspec' + str(main.iteration)
       sys.stdout.write("===================================================================================== \n")
       sys.stdout.write("Wall Time= " + str(time.time() - t0) + "   t=" + str(main.t) + \
                        "   Energy = " + str(np.real(energy)) + "  eps = " + str(np.real(dissipation)) + " \n")
@@ -127,7 +132,6 @@ while main.t <= et:
                        "   Re_lambda = " + str(np.real(Re_lambda))   + "  lam/dx = " + \
                        str(np.real(lambda_k/grid.dx)) +  "\n")
       sys.stdout.flush()
-
       #gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
       #    "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
       if (IO == 'serial'):
