@@ -135,9 +135,9 @@ def computeRHS_Ortho(main,grid,myFFT):
         main.Q[2] = main.Q[2] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
     #=========================================================================
 
-    uhat_f = myFFT.dealias(main.uhat,grid)
-    vhat_f = myFFT.dealias(main.vhat,grid)
-    what_f = myFFT.dealias(main.what,grid)
+    uhat_f = grid.filter(main.uhat)
+    vhat_f = grid.filter(main.vhat)
+    what_f = grid.filter(main.what)
     u_f = np.zeros(np.shape(main.u))
     v_f = np.zeros(np.shape(main.v))
     w_f = np.zeros(np.shape(main.w))
@@ -179,3 +179,4 @@ def computeRHS_Ortho(main,grid,myFFT):
 
       main.F[:] = main.Q[:]
     #=========================================================================
+      
