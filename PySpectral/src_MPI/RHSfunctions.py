@@ -163,14 +163,14 @@ def computeRHS_Ortho(main,grid,myFFT):
 
     #==================== RK4  ====================================
     if (main.time_scheme == 'RK4'):
-      main.Q[0] -= myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[0] - 1j*grid.k2[None,:,None]*main.NL[3] - 1j*grid.k3[None,None,:]*main.NL[4] - \
-                                           1j*grid.k1[:,None,None]*phat - main.nu*grid.ksqr*main.uhat ,grid)
+      main.Q[0] = main.Q[0] - myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[0] - 1j*grid.k2[None,:,None]*main.NL[3] - 1j*grid.k3[None,None,:]*main.NL[4] - \
+                                           1j*grid.k1[:,None,None]*phat_f - main.nu*grid.ksqr*uhat_f ,grid)
   
-      main.Q[1] -= myFFT.dealias(-1j*grid.k1[:,None,None]*main.NL[3] - 1j*grid.k2[None,:,None]*main.NL[1] - 1j*grid.k3[None,None,:]*main.NL[5] - \
-                                           1j*grid.k2[None,:,None]*phat - main.nu*grid.ksqr*main.vhat ,grid)
+      main.Q[1] = main.Q[1] - myFFT.dealias(-1j*grid.k1[:,None,None]*main.NL[3] - 1j*grid.k2[None,:,None]*main.NL[1] - 1j*grid.k3[None,None,:]*main.NL[5] - \
+                                           1j*grid.k2[None,:,None]*phat_f - main.nu*grid.ksqr*vhat_f ,grid)
   
-      main.Q[2] -= myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[4] - 1j*grid.k2[None,:,None]*main.NL[5] - 1j*grid.k3[None,None,:]*main.NL[2] - \
-                                           1j*grid.k3[None,None,:]*phat - main.nu*grid.ksqr*main.what ,grid)
+      main.Q[2] = main.Q[2] - myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[4] - 1j*grid.k2[None,:,None]*main.NL[5] - 1j*grid.k3[None,None,:]*main.NL[2] - \
+                                           1j*grid.k3[None,None,:]*phat_f - main.nu*grid.ksqr*what_f ,grid)
   
       if (main.rotate == 1):
         main.Q[0] = main.Q[0] - 2.*(vhat_f*main.Om3 - what_f*main.Om2)
