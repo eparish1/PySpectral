@@ -128,7 +128,7 @@ class variables:
     ##============ tau-model ========================
     if (turb_model == 'Dynamic tau-model'):
       print('Using the dynamic tau-model')
-      self.kf = int(grid.kc/2.)
+      self.kf = int(grid.kc*2./3.)
       self.testfilt_k1 = np.ones(grid.N1)
       self.testfilt_k2 = np.ones(grid.N2)
       self.testfilt_k3 = np.ones(grid.N3/2+1)

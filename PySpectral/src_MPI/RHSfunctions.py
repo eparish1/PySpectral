@@ -177,6 +177,6 @@ def computeRHS_Ortho(main,grid,myFFT):
         main.Q[1] = main.Q[1] - 2.*(what_f*main.Om1 - uhat_f*main.Om3)
         main.Q[2] = main.Q[2] - 2.*(uhat_f*main.Om2 - vhat_f*main.Om1)
 
-      main.F[:] = main.Q[:]
+      #main.F[:] = main.Q[:]
     #=========================================================================
       

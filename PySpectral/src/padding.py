@@ -49,6 +49,21 @@ def pad_2x(uhat,arrange):
   return uhat_pad
 
 
+def seperateModes_testFilter(uhat_pad,main):
+  N1 = np.shape(uhat_pad)[0]/2
+  N2 = np.shape(uhat_pad)[1]/2
+  N3 = (np.shape(uhat_pad)[2] + 1)/2
+  u_p = np.zeros((2*N1,2*N2,2*N3-1),dtype = 'complex')
+  u_q = np.zeros((2*N1,2*N2,2*N3-1),dtype = 'complex')
+  # the modes in q should include the oddball
+  u_p[0:main.kf,0:main.kf,0:main.kf] = uhat_pad[0:main.kf,0:main.kf,0:main.kf]                                    
+  u_p[-main.kf+1::,0:main.kf,0:main.kf] = uhat_pad[-main.kf+1::,0:main.kf,0:main.kf]
+  u_p[0:main.kf,-main.kf+1::,0:main.kf] = uhat_pad[0:main.kf,-main.kf+1::,0:main.kf] 
+  u_p[-main.kf+1::,-main.kf+1::,0:main.kf] = uhat_pad[-main.kf+1::,-main.kf+1::,0:main.kf] 
+  u_q = uhat_pad - u_p
+  return u_p,u_q
+
+
 def seperateModes(uhat_pad,arrange):
   N1 = np.shape(uhat_pad)[0]/2
   N2 = np.shape(uhat_pad)[1]/2

@@ -115,7 +115,6 @@ while main.t <= et:
     myFFT.myifft3D(main.uhat,main.u)
     myFFT.myifft3D(main.vhat,main.v)
     myFFT.myifft3D(main.what,main.w)
-    w0_u,w0_v,w0_w = utilities.computeSGS_DNS(main,grid,myFFT) 
     if (IO == 'serial'):
       uGlobal = allGather_physical(main.u,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
       vGlobal = allGather_physical(main.v,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
@@ -144,8 +143,10 @@ while main.t <= et:
     if (IO == 'MPI'):
       string2 = solloc + '/npsol' + str(main.iteration)
       if (main.turb_model == 'Orthogonal Dynamics'):
+        utilities.computeF(main,grid,myFFT)
         np.savez(string2,u=u,v=v,w=w,F = main.F/eps)
       else:
+        w0_u,w0_v,w0_w = utilities.computeSGS_DNS(main,grid,myFFT) 
         np.savez(string2,u=u,v=v,w=w,w0_u=w0_u,w0_v=w0_v,w0_w=w0_w)
 
 

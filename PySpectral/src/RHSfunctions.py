@@ -496,6 +496,99 @@ def computeRHS_staumodel(main,grid,myFFT,utilities):
       main.Q[2::3,2::3,2::3] = main.Q[2::3,2::3,2::3] + 2.*(main.uhat*main.Om2 - main.vhat*main.Om1)
 
 
+
+def computeRHS_Dtaumodel_2(main,grid,myFFT,utilities):
+    main.Q2U()
+    ## in the t-model, do 2x padding because we want to have convolutions where 
+    ## the modes in G support twice the modes in F.
+    def computePLQLu():
+      scale = np.sqrt( (2.)**3*np.sqrt(grid.N1*grid.N2*grid.N3) )
+      Ureal = np.zeros( (3,int(2.*grid.N1),int(2.*grid.N2),int(2.*grid.N3)) )
+  
+      PLU_qreal = np.zeros( (3,int(2.*grid.N1),int(2.*grid.N2),int(2*grid.N3)) )
+  
+      PLU_p = np.zeros( (3,int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+      PLU_q = np.zeros( (3,int(2.*grid.N1),int(2.*grid.N2),int(grid.N3+1)) ,dtype = 'complex')
+  
+      uhat = unpad(pad(uhat,1),1)
+      vhat = unpad(pad(vhat,1),1)
+      what = unpad(pad(what,1),1)
+
+      uhat_pad = pad_2x(uhat,1)
+      vhat_pad = pad_2x(vhat,1)
+      what_pad = pad_2x(what,1)
+      Ureal[0] = myFFT.ifftT_obj2(uhat_pad*scale)
+      Ureal[1] = myFFT.ifftT_obj2(vhat_pad*scale)
+      Ureal[2] = myFFT.ifftT_obj2(what_pad*scale)
+
+      NL = np.zeros((6,2*grid.N1,2*grid.N2,grid.N3+1),dtype='complex')
+      NL[0] = myFFT.fft_obj2(Ureal[0]*Ureal[0])
+      NL[1] = myFFT.fft_obj2(Ureal[1]*Ureal[1])
+      NL[2] = myFFT.fft_obj2(Ureal[2]*Ureal[2])
+      NL[3] = myFFT.fft_obj2(Ureal[0]*Ureal[1])
+      NL[4] = myFFT.fft_obj2(Ureal[0]*Ureal[2])
+      NL[5] = myFFT.fft_obj2(Ureal[1]*Ureal[2])
+
+      phat  = -grid.k1f*grid.k1f*grid.ksqrf_i*NL[0] - grid.k2f*grid.k2f*grid.ksqrf_i*NL[1] - \
+             grid.k3f*grid.k3f*grid.ksqrf_i*NL[2] - 2.*grid.k1f*grid.k2f*grid.ksqrf_i*NL[3] - \
+             2.*grid.k1f*grid.k3f*grid.ksqrf_i*NL[4] - 2.*grid.k2f*grid.k3f*grid.ksqrf_i*NL[5]
+
+      if (main.rotate == 1):
+        phat[:,:,:] = phat[:,:,:] - 2.*grid.ksqrf_i*1j*( grid.k1f*(vhat_pad*main.Om3 - what_pad*main.Om2) + 
+                    grid.k2f*(what_pad*main.Om1 - uhat_pad*main.Om3) + \
+                    grid.k3f*(uhat_pad*main.Om2 - vhat_pad*main.Om1))
+
+
+
+      PLu = -1j*grid.k1f*NL[0] - 1j*grid.k2f*NL[3] - 1j*grid.k3f*NL[4] - \
+                                         1j*grid.k1f*phat - main.nu*grid.ksqrf*pad_2x(main.uhat,1)
+ 
+      PLv = -1j*grid.k1f*NL[3] - 1j*grid.k2f*NL[1] - 1j*grid.k3f*NL[5] - \
+                                         1j*grid.k2f*phat - main.nu*grid.ksqrf*pad_2x(main.vhat,1)
+
+      PLw = -1j*grid.k1f*NL[4] - 1j*grid.k2f*NL[5] - 1j*grid.k3f*NL[2] - \
+                                         1j*grid.k3f*phat - main.nu*grid.ksqrf*pad_2x(main.what,1)
+
+      PLU_p[0],PLU_q[0] = seperateModes(PLu,1)
+      PLU_p[1],PLU_q[1] = seperateModes(PLv,1)
+      PLU_p[2],PLU_q[2] = seperateModes(PLw,1)
+
+      PLU_qreal[0] = myFFT.ifftT_obj2(PLU_q[0]*scale)
+      PLU_qreal[1] = myFFT.ifftT_obj2(PLU_q[1]*scale)
+      PLU_qreal[2] = myFFT.ifftT_obj2(PLU_q[2]*scale)
+
+      up_PLuq = unpad_2x( myFFT.fft_obj2(Ureal[0]*PLU_qreal[0]),1)
+      vp_PLuq = unpad_2x( myFFT.fft_obj2(Ureal[1]*PLU_qreal[0]),1)
+      wp_PLuq = unpad_2x( myFFT.fft_obj2(Ureal[2]*PLU_qreal[0]),1)
+
+      up_PLvq = unpad_2x( myFFT.fft_obj2(Ureal[0]*PLU_qreal[1]),1)
+      vp_PLvq = unpad_2x( myFFT.fft_obj2(Ureal[1]*PLU_qreal[1]),1)
+      wp_PLvq = unpad_2x( myFFT.fft_obj2(Ureal[2]*PLU_qreal[1]),1)
+
+      up_PLwq = unpad_2x( myFFT.fft_obj2(Ureal[0]*PLU_qreal[2]),1)
+      vp_PLwq = unpad_2x( myFFT.fft_obj2(Ureal[1]*PLU_qreal[2]),1)
+      wp_PLwq = unpad_2x( myFFT.fft_obj2(Ureal[2]*PLU_qreal[2]),1)
+
+ 
+      pterm = 2.*grid.ksqr_i*( grid.k1*grid.k1*up_PLuq + grid.k2*grid.k2*vp_PLvq + grid.k3*grid.k3*wp_PLwq + \
+                          grid.k1*grid.k2*(up_PLvq + vp_PLuq) + grid.k1*grid.k3*(up_PLwq + wp_PLuq) + \
+                          grid.k2*grid.k3*(vp_PLwq + wp_PLvq) )
+
+      PLQLU = np.zeros((3,grid.N1,grid.N2,grid.N3/2+1),dtype='complex')
+      PLQLU[0] = -1j*grid.k1*up_PLuq - 1j*grid.k2*vp_PLuq - 1j*grid.k3*wp_PLuq - \
+             1j*grid.k1*up_PLuq - 1j*grid.k2*up_PLvq - 1j*grid.k3*up_PLwq + \
+             1j*grid.k1*pterm
+
+      PLQLU[1] = -1j*grid.k1*up_PLvq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*wp_PLvq - \
+             1j*grid.k1*vp_PLuq - 1j*grid.k2*vp_PLvq - 1j*grid.k3*vp_PLwq + \
+             1j*grid.k2*pterm 
+
+      PLQLU[2] = -1j*grid.k1*up_PLwq - 1j*grid.k2*vp_PLwq - 1j*grid.k3*wp_PLwq -\
+             1j*grid.k1*wp_PLuq - 1j*grid.k2*wp_PLvq - 1j*grid.k3*wp_PLwq + \
+             1j*grid.k3*pterm 
+
+      return PLQLU
+
 def computeRHS_Dtaumodel(main,grid,myFFT,utilities):
     main.Q2U()
     ## in the t-model, do 2x padding because we want to have convolutions where 
