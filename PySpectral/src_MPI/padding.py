@@ -49,19 +49,10 @@ def pad_2x(uhat,arrange):
   return uhat_pad
 
 
-def seperateModes(uhat_pad,arrange):
-  N1 = np.shape(uhat_pad)[0]/2
-  N2 = np.shape(uhat_pad)[1]/2
-  N3 = (np.shape(uhat_pad)[2] + 1)/2
-  u_p = np.zeros((2*N1,2*N2,2*N3-1),dtype = 'complex')
-  u_q = np.zeros((2*N1,2*N2,2*N3-1),dtype = 'complex')
-  # the modes in q should include the oddball
-  u_p[0:N1/2,0:N2/2,0:-N3] = uhat_pad[0:N1/2,0:N2/2,0:-N3]                                    
-  u_p[-N1/2+1::,0:N2/2,0:-N3] = uhat_pad[-N1/2+1::,0:N2/2,0:-N3]
-  u_p[0:N1/2,-N2/2+1::,0:-N3] = uhat_pad[0:N1/2,-N2/2+1::,0:-N3] 
-  u_p[-N1/2+1::,-N2/2+1::,0:-N3] = uhat_pad[-N1/2+1::,-N2/2+1::,0:-N3] 
-  u_q = uhat_pad - u_p
-  return u_p,u_q
+def seperateModes(uhat,grid):
+  uhat_p = grid.filter(uhat)
+  uhat_q = uhat - uhat_p
+  return uhat_p,uhat_q
 
 def seperateModesBudgets(uhat_pad,arrange,kc):
   N1 = np.shape(uhat_pad)[0]/2
