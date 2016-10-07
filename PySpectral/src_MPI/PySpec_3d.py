@@ -148,7 +148,6 @@ while main.t <= et:
       else:
         w0_u,w0_v,w0_w = utilities.computeSGS_DNS(main,grid,myFFT) 
         PLQLU = utilities.computePLQLU(main,grid,myFFT)
-        print(np.linalg.norm(PLQLU))
         np.savez(string2,u=u,v=v,w=w,w0_u=w0_u,w0_v=w0_v,w0_w=w0_w,PLQLU=PLQLU)
 
 
