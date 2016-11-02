@@ -650,7 +650,7 @@ class utilitiesClass():
       myFFT.myifft3D(Omhat[i],Om[i] )
     S_mag = (S[0]*S[0] + S[1]*S[1] + S[2]*S[2] + S[3]*S[3] + S[4]*S[4] + S[5]*S[5])
     Om_mag= (Om[0]*Om[0]*2 + Om[1]*Om[1]*2 + Om[2]*Om[2]*2)
-    Q = S_mag - Om_mag
+    Q = 0.5*(Om_mag - S_mag)
     return Q
  
   def computePLQLU(self,main,grid,myFFT):
