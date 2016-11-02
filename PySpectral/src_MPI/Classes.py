@@ -627,7 +627,32 @@ class utilitiesClass():
       main.F[1] = main.F[1] - 2.*(what_f*main.Om1 - uhat_f*main.Om3)
       main.F[2] = main.F[2] - 2.*(uhat_f*main.Om2 - vhat_f*main.Om1)
 
+  def computeQcriterion(self,main,grid,myFFT):
+    ## get strain rate tensor
+    Shat= np.zeros((6,grid.Npx,grid.N2,grid.N3),dtype='complex')
+    S = np.zeros((6,grid.N1,grid.Npy,grid.N3),dtype='complex')
 
+    Shat[0] = 1j*grid.k1*main.uhat
+    Shat[1] = 1j*grid.k2*main.vhat
+    Shat[2] = 1j*grid.k2*main.what
+    Shat[3] = 0.5*1j*(grid.k2*main.uhat + grid.k1*main.vhat)
+    Shat[4] = 0.5*1j*(grid.k3*main.uhat + grid.k1*main.what)
+    Shat[5] = 0.5*1j*(grid.k3*main.vhat + grid.k2*main.what)
+    for i in range(0,6):
+      myFFT.myifft3D(Shat[i],S[i])
+    ## get vorticity rate tensor (diagonals are zero)
+    Omhat = np.zeros((3,grid.Npx,grid.N2,grid.N3),dtype='complex')
+    Om = np.zeros((3,grid.N1,grid.Npy,grid.N3),dtype='complex')
+    Omhat[0] = 0.5*1j*(grid.k2*main.uhat - grid.k1*main.vhat) #12
+    Omhat[1] = 0.5*1j*(grid.k3*main.uhat - grid.k1*main.what) #13
+    Omhat[2] = 0.5*1j*(grid.k3*main.vhat - grid.k2*main.what) #23
+    for i in range(0,3):
+      myFFT.myifft3D(Omhat[i],Om[i] )
+    S_mag = (S[0]*S[0] + S[1]*S[1] + S[2]*S[2] + S[3]*S[3] + S[4]*S[4] + S[5]*S[5])
+    Om_mag= (Om[0]*Om[0]*2 + Om[1]*Om[1]*2 + Om[2]*Om[2]*2)
+    Q = S_mag - Om_mag
+    return Q
+ 
   def computePLQLU(self,main,grid,myFFT):
     #function to compute PLQLu
     comm = MPI.COMM_WORLD
