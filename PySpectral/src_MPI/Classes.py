@@ -629,8 +629,8 @@ class utilitiesClass():
 
   def computeQcriterion(self,main,grid,myFFT):
     ## get strain rate tensor
-    Shat= np.zeros((6,grid.Npx,grid.N2,grid.N3),dtype='complex')
-    S = np.zeros((6,grid.N1,grid.Npy,grid.N3),dtype='complex')
+    Shat= np.zeros((6,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+    S = np.zeros((6,grid.N1,grid.Npy,grid.N3))
 
     Shat[0] = 1j*grid.k1[:,None,None]*main.uhat
     Shat[1] = 1j*grid.k2[None,:,None]*main.vhat
@@ -641,8 +641,8 @@ class utilitiesClass():
     for i in range(0,6):
       myFFT.myifft3D(Shat[i],S[i])
     ## get vorticity rate tensor (diagonals are zero)
-    Omhat = np.zeros((3,grid.Npx,grid.N2,grid.N3),dtype='complex')
-    Om = np.zeros((3,grid.N1,grid.Npy,grid.N3),dtype='complex')
+    Omhat = np.zeros((3,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+    Om = np.zeros((3,grid.N1,grid.Npy,grid.N3))
     Omhat[0] = 0.5*1j*(grid.k2[None,:,None]*main.uhat - grid.k1[:,None,None]*main.vhat) #12
     Omhat[1] = 0.5*1j*(grid.k3[None,None,:]*main.uhat - grid.k1[:,None,None]*main.what) #13
     Omhat[2] = 0.5*1j*(grid.k3[None,None,:]*main.vhat - grid.k2[None,:,None]*main.what) #23
