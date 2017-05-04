@@ -748,3 +748,60 @@ class utilitiesClass():
             1j*grid.k3[None,None,:]*pterm
 
     return PLQLU
+
+def computeSMAG(main,grid,myFFT,utilities):
+    uhat_f = grid.filter(main.uhat)
+    vhat_f = grid.filter(main.vhat)
+    what_f = grid.filter(main.what)
+    u_f = np.zeros((grid.N1,grid.Npy,grid.N3))
+    v_f = np.zeros((grid.N1,grid.Npy,grid.N3))
+    w_f = np.zeros((grid.N1,grid.Npy,grid.N3))
+
+    myFFT.myifft3D(uhat_f,u_f)
+    myFFT.myifft3D(vhat_f,v_f)
+    myFFT.myifft3D(what_f,w_f)
+
+    #### Dynamic Smagorinsky Contribution
+    ## Now compute the resolved stress tensor and the filtered stress tensor   
+    S11hat = 1j*grid.k1[:,None,None]*uhat_f
+    S22hat = 1j*grid.k2[None,:,None]*vhat_f
+    S33hat = 1j*grid.k3[None,None,:]*what_f
+    S12hat = 0.5*(1j*grid.k2[None,:,None]*uhat_f + 1j*grid.k1[:,None,None]*vhat_f)
+    S13hat = 0.5*(1j*grid.k3[None,None,:]*uhat_f + 1j*grid.k1[:,None,None]*what_f)
+    S23hat = 0.5*(1j*grid.k3[None,None,:]*vhat_f + 1j*grid.k2[None,:,None]*what_f)
+    S11real = np.zeros((grid.N1,grid.Npy,grid.N3))
+    S22real = np.zeros((grid.N1,grid.Npy,grid.N3))
+    S33real = np.zeros((grid.N1,grid.Npy,grid.N3))
+    S12real = np.zeros((grid.N1,grid.Npy,grid.N3))
+    S13real = np.zeros((grid.N1,grid.Npy,grid.N3))
+    S23real = np.zeros((grid.N1,grid.Npy,grid.N3))
+    myFFT.myifft3D(S11hat,S11real)
+    myFFT.myifft3D(S22hat,S22real)
+    myFFT.myifft3D(S33hat,S33real)
+    myFFT.myifft3D(S12hat,S12real)
+    myFFT.myifft3D(S13hat,S13real)
+    myFFT.myifft3D(S23hat,S23real)
+
+    S_magreal = np.sqrt( 2.*(S11real*S11real + S22real*S22real + S33real*S33real + \
+              2.*S12real*S12real + 2.*S13real*S13real + 2.*S23real*S23real ) )
+    nutreal = grid.Delta*grid.Delta*np.abs(S_magreal)
+
+    tauhat = np.zeros((grid.Npx,grid.N2,grid.N3/2+1,6),dtype='complex')
+    myFFT.myfft3D(-2.*nutreal*S11real,tauhat[:,:,:,0] )
+    myFFT.myfft3D(-2.*nutreal*S22real,tauhat[:,:,:,1] )
+    myFFT.myfft3D(-2.*nutreal*S33real,tauhat[:,:,:,2] )
+    myFFT.myfft3D(-2.*nutreal*S12real,tauhat[:,:,:,3] )
+    myFFT.myfft3D(-2.*nutreal*S13real,tauhat[:,:,:,4] )
+    myFFT.myfft3D(-2.*nutreal*S23real,tauhat[:,:,:,5] )
+
+    ## contribution of projection to RHS sgs (k_m k_j)/k^2 \tau_{jm}
+    tau_projection  = 1j*grid.ksqr_i*( grid.k1[:,None,None]*grid.k1[:,None,None]*tauhat[:,:,:,0] + grid.k2[None,:,None]*grid.k2[None,:,None]*tauhat[:,:,:,1] + \
+             grid.k3[None,None,:]*grid.k3[None,None,:]*tauhat[:,:,:,2] + 2.*grid.k1[:,None,None]*grid.k2[None,:,None]*tauhat[:,:,:,3] + \
+             2.*grid.k1[:,None,None]*grid.k3[None,None,:]*tauhat[:,:,:,4] + 2.*grid.k2[None,:,None]*grid.k3[None,None,:]*tauhat[:,:,:,5] )
+
+    #Now SGS contributions. w = -\delta_{im}\tau_{jm}  + k_i k_m / k^2 i k_j \tau_{jm}
+    w0_U = np.zeros((3,grid.Npx,grid.N2,grid.N3/2+1) )
+    w0_U[0] = -1j*grid.k1[:,None,None]*tauhat[:,:,:,0] - 1j*grid.k2[None,:,None]*tauhat[:,:,:,3] - 1j*grid.k3[None,None,:]*tauhat[:,:,:,4] + 1j*grid.k1[:,None,None]*tau_projection
+    w0_U[1] = -1j*grid.k1[:,None,None]*tauhat[:,:,:,3] - 1j*grid.k2[None,:,None]*tauhat[:,:,:,1] - 1j*grid.k3[None,None,:]*tauhat[:,:,:,5] + 1j*grid.k2[None,:,None]*tau_projection
+    w0_U[2] = -1j*grid.k1[:,None,None]*tauhat[:,:,:,4] - 1j*grid.k2[None,:,None]*tauhat[:,:,:,5] - 1j*grid.k3[None,None,:]*tauhat[:,:,:,2] + 1j*grid.k3[None,None,:]*tau_projection
+    return w0_U
