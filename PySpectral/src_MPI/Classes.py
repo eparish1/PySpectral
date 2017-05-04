@@ -749,7 +749,11 @@ class utilitiesClass():
 
     return PLQLU
 
-def computeSMAG(main,grid,myFFT,utilities):
+def computeSMAG(main,grid,myFFT):
+    comm = MPI.COMM_WORLD
+    num_processes = comm.Get_size()
+    mpi_rank = comm.Get_rank()
+
     uhat_f = grid.filter(main.uhat)
     vhat_f = grid.filter(main.vhat)
     what_f = grid.filter(main.what)
