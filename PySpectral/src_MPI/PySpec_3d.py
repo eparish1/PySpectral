@@ -20,6 +20,15 @@ else:				             #|
   Om1 = 0                                    #|
   Om2 = 0                                    #|
   Om3 = 0                                    #|
+if ('B1' in globals()\
+  and 'B2' in globals()\
+  and 'B3' in globals()):                    #|
+    pass                                     #|
+else:				             #|
+  B1 = 0                                     #|
+  B2 = 0                                     #|
+  B3 = 0                                     #|
+
                                              #|
 if 'cfl' in globals():			     #|
   pass					     #|
@@ -79,7 +88,7 @@ if (mpi_rank == 0):
 #=====================================================================
 myFFT = FFTclass(N1,N2,N3,nthreads,fft_type,Npx,Npy,num_processes,comm,mpi_rank)
 grid = gridclass(N1,N2,N3,x,y,z,kc,num_processes,L1,L2,L3,mpi_rank,comm,turb_model)
-main = variables(turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain,time_scheme)
+main = variables(turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,B1,B2,B3,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain,time_scheme)
 utilities = utilitiesClass()
 #====================================================================
 
@@ -112,9 +121,14 @@ while main.t <= et:
     ktrans,transfer_res = utilities.computeTransfer_resolved(main,grid,myFFT)
     kspecr,spectrum_res = utilities.computeSpectrum_resolved(main,grid)
     E_res = utilities.computeEnergy_resolved(main,grid)
+    E_MHD = utilities.computeMHDEnergy(main,grid)
+    E_MHD_res = utilities.computeMHDEnergy_resolved(main,grid)
     myFFT.myifft3D(main.uhat,main.u)
     myFFT.myifft3D(main.vhat,main.v)
     myFFT.myifft3D(main.what,main.w)
+    kspec,mhd_spectrum = utilities.computeMHDSpectrum(main,grid)
+    kspec,mhd_spectrum_res = utilities.computeMHDSpectrum_resolved(main,grid)
+
     if (IO == 'serial'):
       uGlobal = allGather_physical(main.u,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
       vGlobal = allGather_physical(main.v,comm,mpi_rank,grid.N1,grid.N2,grid.N3,num_processes,Npy)
@@ -130,6 +144,7 @@ while main.t <= et:
       sys.stdout.write("  tau_k/dt = " + str(np.real(tau_k/main.dt)) + \
                        "   Re_lambda = " + str(np.real(Re_lambda))   + "  lam/dx = " + \
                        str(np.real(lambda_k/grid.dx)) +  "\n")
+      sys.stdout.write(" MHD energy = " + str(E_MHD) + "\n")
       sys.stdout.flush()
       #gridToVTK(string, grid.xG,grid.yG,grid.zG, pointData = {"u" : np.real(uGlobal.transpose()) , \
       #    "v" : np.real(vGlobal.transpose()) , "w" : np.real(wGlobal.transpose())  } )
@@ -138,7 +153,7 @@ while main.t <= et:
       np.savez(string3,k = kspec,spec = spectrum,kt = ktrans,T = transfer,spec_res = spectrum_res, \
                T_res = transfer_res,Re_lambda=Re_lambda,eps=np.real(dissipation),t=main.t,Energy = \
                energy,space_res = np.real(lambda_k/grid.dx),time_res = np.real(tau_k/main.dt), \
-               Energy_res = E_res)
+               Energy_res = E_res,Energy_MHD=E_MHD,Energy_MHD_res=E_MHD_res,spec_mhd=mhd_spectrum,spec_mhd_res=mhd_spectrum_res)
 
     if (IO == 'MPI'):
       string2 = solloc + '/npsol' + str(main.iteration)
@@ -149,7 +164,7 @@ while main.t <= et:
         w0_u,w0_v,w0_w = utilities.computeSGS_DNS(main,grid,myFFT) 
         PLQLU = utilities.computePLQLU(main,grid,myFFT)
         Qcri = utilities.computeQcriterion(main,grid,myFFT)
-        np.savez(string2,u=u,v=v,w=w,Q=Qcri,w0_u=w0_u,w0_v=w0_v,w0_w=w0_w,PLQLU=PLQLU)
+        np.savez(string2,u=u,v=v,w=w,Q=Qcri,w0_u=w0_u,w0_v=w0_v,w0_w=w0_w,B1=main.B1,B2=main.B2,B3=main.B3,PLQLU=PLQLU)
 
 
   main.iteration += 1

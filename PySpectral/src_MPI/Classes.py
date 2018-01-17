@@ -3,7 +3,7 @@ import sys
 from RHSfunctions import *
 from time_schemes import *
 class variables:
-  def __init__(self,turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain,time_scheme):
+  def __init__(self,turb_model,rotate,Om1,Om2,Om3,grid,u,v,w,B1,B2,B3,uhat,vhat,what,t,dt,nu,myFFT,mpi_rank,initDomain,time_scheme):
     self.turb_model = turb_model
     self.rotate = rotate
     self.Om1 = Om1
@@ -75,6 +75,71 @@ class variables:
         self.vhat[:,:,:] = self.Q[1]
         self.what[:,:,:] = self.Q[2]
       self.computeRHS = computeRHS_NOSGS
+      self.Q2U = Q2U
+      self.U2Q = U2Q 
+    ##=============================================
+    ##============ MHD MODE ========================
+    if (turb_model == 'MHD'):
+      if (mpi_rank == 0):
+        sys.stdout.write('Running Navier-Stokes with MHD\n')
+        sys.stdout.flush()
+      self.Q = np.zeros( (6,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.Q0 = np.zeros( (6,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
+      self.MHDNL = np.zeros((6,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+      self.u_x_B = np.zeros((3,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+      self.lam = self.nu
+      self.nvars = 6
+      self.B1hat = np.zeros(np.shape(self.uhat),dtype='complex')
+      self.B1 = np.zeros(np.shape(self.u))
+      self.B1[:] = B1[:]
+      self.B2hat = np.zeros(np.shape(self.uhat),dtype='complex')
+      self.B2 = np.zeros(np.shape(self.u))
+      self.B2[:] = B2[:]
+      self.B3hat = np.zeros(np.shape(self.uhat),dtype='complex')
+      self.B3 = np.zeros(np.shape(self.u))
+      self.B3[:] = B3[:]
+      if (initDomain == 'Physical'):
+        if (mpi_rank == 0):
+          print('Initializing off physical fields B1,B2,B3')
+        myFFT.myfft3D(self.B1,self.B1hat)
+        myFFT.myfft3D(self.B2,self.B2hat)
+        myFFT.myfft3D(self.B3,self.B3hat)
+      if (initDomain == 'Fourier'):
+        if (mpi_rank == 0):
+          print('Initializing off Fourier fields uhat,vhat,what')
+        myFFT.myifft3D(self.B1hat,self.B1)
+        myFFT.myifft3D(self.B2hat,self.B2)
+        myFFT.myifft3D(self.B3hat,self.B3)
+        ## retake the fft/ifft to make sure that the field is symmetric
+        myFFT.myfft3D(self.B1,self.B1hat)
+        myFFT.myfft3D(self.B2,self.B2hat)
+        myFFT.myfft3D(self.B3,self.B3hat)
+        myFFT.myifft3D(self.B1hat,self.B1)
+        myFFT.myifft3D(self.B2hat,self.B2)
+        myFFT.myifft3D(self.B3hat,self.B3)
+
+      self.Q[0] = self.uhat[:,:,:]
+      self.Q[1] = self.vhat[:,:,:]
+      self.Q[2] = self.what[:,:,:]
+      self.Q[3] = self.B1hat[:,:,:]
+      self.Q[4] = self.B2hat[:,:,:]
+      self.Q[5] = self.B3hat[:,:,:]
+      def U2Q():
+        self.Q[0] = self.uhat[:,:,:]
+        self.Q[1] = self.vhat[:,:,:]
+        self.Q[2] = self.what[:,:,:]
+        self.Q[3] = self.B1hat[:,:,:]
+        self.Q[4] = self.B2hat[:,:,:]
+        self.Q[5] = self.B3hat[:,:,:]
+
+      def Q2U():
+        self.uhat[:,:,:] = self.Q[0]
+        self.vhat[:,:,:] = self.Q[1]
+        self.what[:,:,:] = self.Q[2]
+        self.B1hat[:,:,:] = self.Q[3]
+        self.B2hat[:,:,:] = self.Q[4]
+        self.B3hat[:,:,:] = self.Q[5]
+      self.computeRHS = computeRHS_MHD
       self.Q2U = Q2U
       self.U2Q = U2Q 
     ##=============================================
@@ -214,6 +279,25 @@ class utilitiesClass():
       else:
         return 0
 
+  def computeMHDEnergy(self,main,grid):
+      ## compute energy on each node
+      B1E = np.sum(main.B1hat[:,:,1:grid.N3/2]*np.conj(main.B1hat[:,:,1:grid.N3/2]*2) ) + \
+           np.sum(main.B1hat[:,:,0]*np.conj(main.B1hat[:,:,0]))
+      B2E = np.sum(main.B2hat[:,:,1:grid.N3/2]*np.conj(main.B2hat[:,:,1:grid.N3/2]*2) ) + \
+           np.sum(main.B2hat[:,:,0]*np.conj(main.B2hat[:,:,0]))
+      B3E = np.sum(main.B3hat[:,:,1:grid.N3/2]*np.conj(main.B3hat[:,:,1:grid.N3/2]*2) ) + \
+           np.sum(main.B3hat[:,:,0]*np.conj(main.B3hat[:,:,0]))
+      energy_local = np.real(0.5*(B1E + B2E + B3E) )
+      data = grid.comm.gather(energy_local,root = 0)
+      if (grid.mpi_rank == 0):
+        energy = 0.
+        for j in range(0,grid.num_processes):
+          energy = energy + data[j]
+        return  energy/(grid.N1*grid.N2*grid.N3)**2
+      else:
+        return 0
+
+
 
   def computeEnergy_resolved(self,main,grid):
       uFilt = grid.filter(main.uhat)
@@ -234,6 +318,29 @@ class utilitiesClass():
         return  energy / (grid.N1*grid.N2*grid.N3)**2
       else:
         return 0
+
+  def computeMHDEnergy_resolved(self,main,grid):
+      ## compute energy on each node
+      B1Filt = grid.filter(main.B1hat)
+      B2Filt = grid.filter(main.B2hat)
+      B3Filt = grid.filter(main.B3hat)
+
+      B1E = np.sum(B1Filt[:,:,1:grid.N3/2]*np.conj(B1Filt[:,:,1:grid.N3/2]*2) ) + \
+           np.sum(B1Filt[:,:,0]*np.conj(B1Filt[:,:,0]))
+      B2E = np.sum(B2Filt[:,:,1:grid.N3/2]*np.conj(B2Filt[:,:,1:grid.N3/2]*2) ) + \
+           np.sum(B2Filt[:,:,0]*np.conj(B2Filt[:,:,0]))
+      B3E = np.sum(B3Filt[:,:,1:grid.N3/2]*np.conj(B3Filt[:,:,1:grid.N3/2]*2) ) + \
+           np.sum(B3Filt[:,:,0]*np.conj(B3Filt[:,:,0]))
+      energy_local = np.real(0.5*(B1E + B2E + B3E) )
+      data = grid.comm.gather(energy_local,root = 0)
+      if (grid.mpi_rank == 0):
+        energy = 0.
+        for j in range(0,grid.num_processes):
+          energy = energy + data[j]
+        return  energy/(grid.N1*grid.N2*grid.N3)**2
+      else:
+        return 0
+
 
   def computeEnstrophy(self,main,grid):
       omega1 = 1j*grid.k2[None,:,None]*main.what - 1j*grid.k3[None,None,:]*main.vhat
@@ -296,12 +403,96 @@ class utilitiesClass():
         return 0,0
 
 
+  def computeMHDSpectrum(self,main,grid):
+
+      ##====== Compute Spectra locally ===============
+
+      kmag = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,1::]*grid.L3/(2.*np.pi))**2)
+      E =  (2.*main.B1hat[:,:,1::]*np.conj(main.B1hat[:,:,1::]) ).flatten() + \
+           (2.*main.B2hat[:,:,1::]*np.conj(main.B2hat[:,:,1::]) ).flatten() + \
+           (2.*main.B3hat[:,:,1::]*np.conj(main.B3hat[:,:,1::]) ).flatten()
+ 
+      ksort = np.int16(np.round(np.sort(kmag.flatten())))
+      kargsort = np.argsort(kmag.flatten())
+      E = np.bincount(ksort,np.real(E)[kargsort])
+      
+      kmag2 = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,0]*grid.L3/(2.*np.pi))**2)
+      E2 = (main.B1hat[:,:,0]*np.conj(main.B1hat[:,:,0])).flatten() + \
+           (main.B2hat[:,:,0]*np.conj(main.B2hat[:,:,0])).flatten() + \
+           (main.B3hat[:,:,0]*np.conj(main.B3hat[:,:,0])).flatten()
+
+      ksort2 = np.int16(np.round(np.sort(kmag2.flatten())))
+      kargsort2 = np.argsort(kmag2.flatten())
+      E2 = np.bincount(ksort2,np.real(E2)[kargsort2])
+
+      k_all = grid.comm.gather(np.amax(ksort)+1,root = 0) 
+      E_all = grid.comm.gather(E,root = 0)
+      k_all2 = grid.comm.gather(np.amax(ksort2)+1,root = 0)
+      E_all2 = grid.comm.gather(E2,root = 0)
+
+      ##====== send to proc zero to add them all up
+      if (grid.mpi_rank == 0):
+        kmax = np.round(np.sqrt((grid.N1/2)**2 + (grid.N2/2)**2 + (grid.N3/2)**2) )
+        kspec = np.linspace(0 , kmax, kmax + 1)
+        spectrum = np.zeros(int(kmax+1))
+        for j in range(0,grid.num_processes):
+          spectrum[0:k_all[j]] = spectrum[0:k_all[j]] + E_all[j][:]
+          spectrum[0:k_all2[j]] = spectrum[0:k_all2[j]] + E_all2[j][:]
+        return kspec,spectrum / (grid.N1*grid.N2*grid.N3)**2
+      else:
+        return 0,0
+
+
+
   def computeSpectrum_resolved(self,main,grid):
       ##====== Compute Spectra locally ===============
       kmag = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,1::]*grid.L3/(2.*np.pi))**2)
       uFilt = grid.filter(main.uhat)
       vFilt = grid.filter(main.vhat)
       wFilt = grid.filter(main.what)
+
+      E =  (2.*uFilt[:,:,1::]*np.conj(uFilt[:,:,1::]) ).flatten() + \
+           (2.*vFilt[:,:,1::]*np.conj(vFilt[:,:,1::]) ).flatten() + \
+           (2.*wFilt[:,:,1::]*np.conj(wFilt[:,:,1::]) ).flatten()
+ 
+      ksort = np.int16(np.round(np.sort(kmag.flatten())))
+      kargsort = np.argsort(kmag.flatten())
+      E = np.bincount(ksort,np.real(E)[kargsort])
+      
+      kmag2 = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,0]*grid.L3/(2.*np.pi))**2)
+      E2 = (uFilt[:,:,0]*np.conj(uFilt[:,:,0])).flatten() + \
+           (vFilt[:,:,0]*np.conj(vFilt[:,:,0])).flatten() + \
+           (wFilt[:,:,0]*np.conj(wFilt[:,:,0])).flatten()
+
+      ksort2 = np.int16(np.round(np.sort(kmag2.flatten())))
+      kargsort2 = np.argsort(kmag2.flatten())
+      E2 = np.bincount(ksort2,np.real(E2)[kargsort2])
+
+      k_all = grid.comm.gather(np.amax(ksort)+1,root = 0) 
+      E_all = grid.comm.gather(E,root = 0)
+      k_all2 = grid.comm.gather(np.amax(ksort2)+1,root = 0)
+      E_all2 = grid.comm.gather(E2,root = 0)
+
+      ##====== send to proc zero to add them all up
+      if (grid.mpi_rank == 0):
+        kmax = np.round(np.sqrt((grid.N1/2)**2 + (grid.N2/2)**2 + (grid.N3/2)**2) )
+        kspec = np.linspace(0 , kmax, kmax + 1)
+        spectrum = np.zeros(int(kmax+1))
+        for j in range(0,grid.num_processes):
+          spectrum[0:k_all[j]] = spectrum[0:k_all[j]] + E_all[j][:]
+          spectrum[0:k_all2[j]] = spectrum[0:k_all2[j]] + E_all2[j][:]
+
+        return kspec,spectrum / (grid.N1*grid.N2*grid.N3)**2
+      else:
+        return 0,0
+
+
+  def computeMHDSpectrum_resolved(self,main,grid):
+      ##====== Compute Spectra locally ===============
+      kmag = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,1::]*grid.L3/(2.*np.pi))**2)
+      uFilt = grid.filter(main.B1hat)
+      vFilt = grid.filter(main.B2hat)
+      wFilt = grid.filter(main.B3hat)
 
       E =  (2.*uFilt[:,:,1::]*np.conj(uFilt[:,:,1::]) ).flatten() + \
            (2.*vFilt[:,:,1::]*np.conj(vFilt[:,:,1::]) ).flatten() + \
@@ -749,7 +940,7 @@ class utilitiesClass():
 
     return PLQLU
 
-def computeSMAG(main,grid,myFFT):
+  def computeSMAG(self,main,grid,myFFT):
     comm = MPI.COMM_WORLD
     num_processes = comm.Get_size()
     mpi_rank = comm.Get_rank()
