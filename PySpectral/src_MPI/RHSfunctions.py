@@ -113,6 +113,7 @@ def computeRHS_MHD(main,grid,myFFT):
     myFFT.myifft3D(main.B2hat,main.B2)
     myFFT.myifft3D(main.B3hat,main.B3)
 
+
     myFFT.myfft3D(main.u*main.u,main.NL[0])
     myFFT.myfft3D(main.v*main.v,main.NL[1])
     myFFT.myfft3D(main.w*main.w,main.NL[2])
@@ -148,15 +149,15 @@ def computeRHS_MHD(main,grid,myFFT):
     if (main.time_scheme == 'RK4'):
       main.Q[0] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[0] - 1j*grid.k2[None,:,None]*main.NL[3] - 1j*grid.k3[None,None,:]*main.NL[4] + \
                                   1j*grid.k1[:,None,None]*main.MHDNL[0] + 1j*grid.k2[None,:,None]*main.MHDNL[3] + 1j*grid.k3[None,None,:]*main.MHDNL[4] - \
-                                           1j*grid.k1[:,None,None]*phat - main.nu*grid.ksqr*main.uhat ,grid)
+                                           1j*grid.k1[:,None,None]*phat - main.nu*grid.ksqr*main.uhat + main.force[0],grid)  
   
       main.Q[1] = myFFT.dealias(-1j*grid.k1[:,None,None]*main.NL[3] - 1j*grid.k2[None,:,None]*main.NL[1] - 1j*grid.k3[None,None,:]*main.NL[5] + \
                                  1j*grid.k1[:,None,None]*main.MHDNL[3] + 1j*grid.k2[None,:,None]*main.MHDNL[1] + 1j*grid.k3[None,None,:]*main.MHDNL[5] - \
-                                           1j*grid.k2[None,:,None]*phat - main.nu*grid.ksqr*main.vhat ,grid)
+                                           1j*grid.k2[None,:,None]*phat - main.nu*grid.ksqr*main.vhat + main.force[1] ,grid)
   
       main.Q[2] = myFFT.dealias( -1j*grid.k1[:,None,None]*main.NL[4] - 1j*grid.k2[None,:,None]*main.NL[5] - 1j*grid.k3[None,None,:]*main.NL[2] + \
                                   1j*grid.k1[:,None,None]*main.MHDNL[4] + 1j*grid.k2[None,:,None]*main.MHDNL[5] + 1j*grid.k3[None,None,:]*main.MHDNL[2] - \
-                                           1j*grid.k3[None,None,:]*phat - main.nu*grid.ksqr*main.what ,grid)
+                                           1j*grid.k3[None,None,:]*phat - main.nu*grid.ksqr*main.what + main.force[2],grid)
 
       main.Q[3] = myFFT.dealias( (1j*grid.k2[None,:,None]*main.u_x_B[2] - 1j*grid.k3[None,None,:]*main.u_x_B[1]) - \
                                            main.lam*grid.ksqr*main.B1hat ,grid)

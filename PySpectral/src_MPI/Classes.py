@@ -87,6 +87,11 @@ class variables:
       self.Q0 = np.zeros( (6,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
       self.MHDNL = np.zeros((6,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
       self.u_x_B = np.zeros((3,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+      self.force = np.zeros( (3,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
+      kf = 2
+      f0 = 0.25
+      myFFT.myfft3D(f0*np.sin(kf*grid.x)*np.cos(kf*grid.y)*np.cos(kf*grid.z),self.force[0])
+      myFFT.myfft3D(-f0*np.cos(kf*grid.x)*np.sin(kf*grid.y)*np.cos(kf*grid.z),self.force[1])
       self.lam = self.nu
       self.nvars = 6
       self.B1hat = np.zeros(np.shape(self.uhat),dtype='complex')
