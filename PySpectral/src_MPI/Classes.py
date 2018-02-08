@@ -814,9 +814,9 @@ class utilitiesClass():
              grid.k3[None,None,:]*grid.k3[None,None,:]*main.NL[2] + 2.*grid.k1[:,None,None]*grid.k2[None,:,None]*main.NL[3] + \
              2.*grid.k1[:,None,None]*grid.k3[None,None,:]*main.NL[4] + 2.*grid.k2[None,:,None]*grid.k3[None,None,:]*main.NL[5] )
 
-    main.Q[0] = np.conj(uhat_f)*( -(1j*grid.k1[:,None,None]*tauhat[0] + 1j*grid.k2[None,:,None]*tauhat[3] + 1j*grid.k3[None,None,:]*tauhat[4]) + 1j*grid.k1[:,None,None]*tau_projection)
-    main.Q[1] = np.conj(vhat_f)*(-(1j*grid.k1[:,None,None]*tauhat[3] + 1j*grid.k2[None,:,None]*tauhat[1] + 1j*grid.k3[None,None,:]*tauhat[5]) + 1j*grid.k2[None,:,None]*tau_projection )
-    main.Q[2] = np.conj(what_f)*(-(1j*grid.k1[:,None,None]*tauhat[4] + 1j*grid.k2[None,:,None]*tauhat[5] + 1j*grid.k3[None,None,:]*tauhat[2]) + 1j*grid.k3[None,None,:]*tau_projection )
+    main.Q[0] = np.conj(uhat_f)*( -(1j*grid.k1[:,None,None]*main.NL[0] + 1j*grid.k2[None,:,None]*main.NL[3] + 1j*grid.k3[None,None,:]*main.NL[4]) + 1j*grid.k1[:,None,None]*tau_projection)
+    main.Q[1] = np.conj(vhat_f)*(-(1j*grid.k1[:,None,None]*main.NL[3] + 1j*grid.k2[None,:,None]*main.NL[1] + 1j*grid.k3[None,None,:]*main.NL[5]) + 1j*grid.k2[None,:,None]*tau_projection )
+    main.Q[2] = np.conj(what_f)*(-(1j*grid.k1[:,None,None]*main.NL[4] + 1j*grid.k2[None,:,None]*main.NL[5] + 1j*grid.k3[None,None,:]*main.NL[2]) + 1j*grid.k3[None,None,:]*tau_projection )
 
     kmag = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,1::]*grid.L3/(2.*np.pi))**2)
 
