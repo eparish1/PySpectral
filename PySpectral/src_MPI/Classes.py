@@ -680,6 +680,104 @@ class utilitiesClass():
     else:
       return 0,0
 
+  def computeTransfer_cross_DNS(self,main,grid,myFFT):
+    uhat_f = grid.filter(main.uhat)
+    vhat_f = grid.filter(main.vhat)
+    what_f = grid.filter(main.what)
+    uhat_p = main.uhat - uhat_f
+    vhat_p = main.vhat - vhat_f
+    what_p = main.what - what_f
+
+    ureal_p = np.zeros((grid.N1,grid.Npy,grid.N3))
+    vreal_p = np.zeros((grid.N1,grid.Npy,grid.N3))
+    wreal_p = np.zeros((grid.N1,grid.Npy,grid.N3))
+    ureal_f = np.zeros((grid.N1,grid.Npy,grid.N3))
+    vreal_f = np.zeros((grid.N1,grid.Npy,grid.N3))
+    wreal_f = np.zeros((grid.N1,grid.Npy,grid.N3))
+    NL = np.zeros((6,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+    NL_f = np.zeros((6,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+
+    myFFT.myifft3D(uhat_p,ureal_p)
+    myFFT.myifft3D(vhat_p,vreal_p)
+    myFFT.myifft3D(what_p,wreal_p)
+    myFFT.myifft3D(uhat_f,ureal_f)
+    myFFT.myifft3D(vhat_f,vreal_f)
+    myFFT.myifft3D(what_f,wreal_f)
+
+    myFFT.myfft3D(2.*ureal_f*ureal_p,NL[0])
+    myFFT.myfft3D(2.*vreal_f*vreal_p,NL[1])
+    myFFT.myfft3D(2.*wreal_f*wreal_p,NL[2])
+    myFFT.myfft3D(ureal_f*vreal_p + ureal_p*vreal_f,NL[3])
+    myFFT.myfft3D(ureal_f*wreal_p + ureal_p*wreal_f,NL[4])
+    myFFT.myfft3D(vreal_f*wreal_p + vreal_p*wreal_f,NL[5])
+
+    myFFT.myfft3D(ureal_p*ureal_p,NL_f[0])
+    myFFT.myfft3D(vreal_p*vreal_p,NL_f[1])
+    myFFT.myfft3D(wreal_p*wreal_p,NL_f[2])
+    myFFT.myfft3D(ureal_p*vreal_p,NL_f[3])
+    myFFT.myfft3D(ureal_p*wreal_p,NL_f[4])
+    myFFT.myfft3D(vreal_p*wreal_p,NL_f[5])
+
+
+    ## Compute SGS tensor. 
+    # tau_ij = [d/dx 
+    tauhat = np.zeros((6,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
+    tauhat[0] = NL[0] #+ NL_f[0]
+    tauhat[1] = NL[1] #+ NL_f[1]
+    tauhat[2] = NL[2] #+ NL_f[2]
+    tauhat[3] = NL[3] #+ NL_f[3]
+    tauhat[4] = NL[4] #+ NL_f[4]
+    tauhat[5] = NL[5] #+ NL_f[5]
+
+    ## contribution of projection to RHS sgs (k_m k_j)/k^2 \tau_{jm}
+    tau_projection  = 1j*grid.ksqr_i*( grid.k1[:,None,None]*grid.k1[:,None,None]*tauhat[0] + grid.k2[None,:,None]*grid.k2[None,:,None]*tauhat[1] + \
+             grid.k3[None,None,:]*grid.k3[None,None,:]*tauhat[2] + 2.*grid.k1[:,None,None]*grid.k2[None,:,None]*tauhat[3] + \
+             2.*grid.k1[:,None,None]*grid.k3[None,None,:]*tauhat[4] + 2.*grid.k2[None,:,None]*grid.k3[None,None,:]*tauhat[5] )
+
+    RHSu = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+    RHSv = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+    RHSw = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
+
+    RHSu[:] = np.conj(uhat_f)*( -(1j*grid.k1[:,None,None]*tauhat[0] + 1j*grid.k2[None,:,None]*tauhat[3] + 1j*grid.k3[None,None,:]*tauhat[4]) + 1j*grid.k1[:,None,None]*tau_projection)
+    RHSv[:] = np.conj(vhat_f)*(-(1j*grid.k1[:,None,None]*tauhat[3] + 1j*grid.k2[None,:,None]*tauhat[1] + 1j*grid.k3[None,None,:]*tauhat[5]) + 1j*grid.k2[None,:,None]*tau_projection )
+    RHSw[:] = np.conj(what_f)*(-(1j*grid.k1[:,None,None]*tauhat[4] + 1j*grid.k2[None,:,None]*tauhat[5] + 1j*grid.k3[None,None,:]*tauhat[2]) + 1j*grid.k3[None,None,:]*tau_projection )
+
+    kmag = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,1::]*grid.L3/(2.*np.pi))**2)
+
+    E =  (2.*RHSu[:,:,1::]).flatten() + \
+         (2.*RHSv[:,:,1::]).flatten() + \
+         (2.*RHSw[:,:,1::]).flatten()
+    ksort = np.int16(np.round(np.sort(kmag.flatten())))
+    kargsort = np.argsort(kmag.flatten())
+    E = np.bincount(ksort,weights=np.real(E)[kargsort])
+
+    kmag2 = np.sqrt((grid.k1[:,None,None]*grid.L1/(2.*np.pi))**2 + (grid.k2[None,:,None]*grid.L2/(2.*np.pi))**2 + (grid.k3[None,None,0]*grid.L3/(2.*np.pi))**2)
+    E2 = (RHSu[:,:,0]).flatten() + \
+         (RHSv[:,:,0]).flatten() + \
+         (RHSw[:,:,0]).flatten()
+
+    ksort2 = np.int16(np.round(np.sort(kmag2.flatten())))
+    kargsort2 = np.argsort(kmag2.flatten())
+    E2 = np.bincount(ksort2,weights=np.real(E2)[kargsort2])
+
+    k_all = grid.comm.gather(np.amax(ksort)+1,root = 0)
+    E_all = grid.comm.gather(E,root = 0)
+    k_all2 = grid.comm.gather(np.amax(ksort2)+1,root = 0)
+    E_all2 = grid.comm.gather(E2,root = 0)
+
+    ##====== send to proc zero to add them all up
+    if (grid.mpi_rank == 0):
+      kmax = np.round(np.sqrt((grid.N1/2)**2 + (grid.N2/2)**2 + (grid.N3/2)**2) )
+      kspec = np.linspace(0 , kmax, kmax + 1)
+      transfer = np.zeros(int(kmax+1))
+      for j in range(0,grid.num_processes):
+        transfer[0:k_all[j]] = transfer[0:k_all[j]] + E_all[j][:]
+        transfer[0:k_all2[j]] = transfer[0:k_all2[j]] + E_all2[j][:]
+
+      return kspec,transfer / (grid.N1*grid.N2*grid.N3)**2
+    else:
+      return 0,0
+
 
   def computeSGS_DNS(self,main,grid,myFFT):
     uhat_f = grid.filter(main.uhat)
@@ -740,68 +838,6 @@ class utilitiesClass():
     w0_w[:,:,:] = -(1j*grid.k1[:,None,None]*tauhat[4] + 1j*grid.k2[None,:,None]*tauhat[5] + 1j*grid.k3[None,None,:]*tauhat[2]) + 1j*grid.k3[None,None,:]*tau_projection
     return w0_u,w0_v,w0_w
 
-  def computeSGS_split_DNS(self,main,grid,myFFT):
-    uhat_f = grid.filter(main.uhat)
-    vhat_f = grid.filter(main.vhat)
-    what_f = grid.filter(main.what)
-    uhat_p = main.uhat - uhat_f
-    vhat_p = main.vhat - vhat_f
-    what_p = main.what - what_f
-
-    ureal_p = np.zeros((grid.N1,grid.Npy,grid.N3))
-    vreal_p = np.zeros((grid.N1,grid.Npy,grid.N3))
-    wreal_p = np.zeros((grid.N1,grid.Npy,grid.N3))
-    ureal_f = np.zeros((grid.N1,grid.Npy,grid.N3))
-    vreal_f = np.zeros((grid.N1,grid.Npy,grid.N3))
-    wreal_f = np.zeros((grid.N1,grid.Npy,grid.N3))
-    NL = np.zeros((6,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
-    NL_f = np.zeros((6,grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
-
-    myFFT.myifft3D(uhat_p,ureal_p)
-    myFFT.myifft3D(vhat_p,vreal_p)
-    myFFT.myifft3D(what_p,wreal_p)
-    myFFT.myifft3D(uhat_f,ureal_f)
-    myFFT.myifft3D(vhat_f,vreal_f)
-    myFFT.myifft3D(what_f,wreal_f)
-
-    myFFT.myfft3D(2.*ureal_f*ureal_p,NL[0])
-    myFFT.myfft3D(2.*vreal_f*vreal_p,NL[1])
-    myFFT.myfft3D(2.*wreal_f*wreal_p,NL[2])
-    myFFT.myfft3D(ureal_f*vreal_p + ureal_p*vreal_f,NL[3])
-    myFFT.myfft3D(ureal_f*wreal_p + ureal_p*wreal_f,NL[4])
-    myFFT.myfft3D(vreal_f*wreal_p + vreal_p*wreal_f,NL[5])
-
-    myFFT.myfft3D(ureal_p*ureal_p,NL_f[0])
-    myFFT.myfft3D(vreal_p*vreal_p,NL_f[1])
-    myFFT.myfft3D(wreal_p*wreal_p,NL_f[2])
-    myFFT.myfft3D(ureal_p*vreal_p,NL_f[3])
-    myFFT.myfft3D(ureal_p*wreal_p,NL_f[4])
-    myFFT.myfft3D(vreal_p*wreal_p,NL_f[5])
-
-
-    ## Compute SGS tensor. 
-    # tau_ij = [d/dx 
-    tauhat = np.zeros((6,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
-    tauhat[0] = NL[0] #+ NL_f[0]
-    tauhat[1] = NL[1] #+ NL_f[1]
-    tauhat[2] = NL[2] #+ NL_f[2]
-    tauhat[3] = NL[3] #+ NL_f[3]
-    tauhat[4] = NL[4] #+ NL_f[4]
-    tauhat[5] = NL[5] #+ NL_f[5]
-
-    ## contribution of projection to RHS sgs (k_m k_j)/k^2 \tau_{jm}
-    tau_projection  = 1j*grid.ksqr_i*( grid.k1[:,None,None]*grid.k1[:,None,None]*tauhat[0] + grid.k2[None,:,None]*grid.k2[None,:,None]*tauhat[1] + \
-             grid.k3[None,None,:]*grid.k3[None,None,:]*tauhat[2] + 2.*grid.k1[:,None,None]*grid.k2[None,:,None]*tauhat[3] + \
-             2.*grid.k1[:,None,None]*grid.k3[None,None,:]*tauhat[4] + 2.*grid.k2[None,:,None]*grid.k3[None,None,:]*tauhat[5] )
-
-    w0_u = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
-    w0_v = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
-    w0_w = np.zeros((grid.Npx,grid.N2,grid.N3/2+1),dtype='complex')
-
-    w0_u[:,:,:] = -(1j*grid.k1[:,None,None]*tauhat[0] + 1j*grid.k2[None,:,None]*tauhat[3] + 1j*grid.k3[None,None,:]*tauhat[4]) + 1j*grid.k1[:,None,None]*tau_projection
-    w0_v[:,:,:] = -(1j*grid.k1[:,None,None]*tauhat[3] + 1j*grid.k2[None,:,None]*tauhat[1] + 1j*grid.k3[None,None,:]*tauhat[5]) + 1j*grid.k2[None,:,None]*tau_projection
-    w0_w[:,:,:] = -(1j*grid.k1[:,None,None]*tauhat[4] + 1j*grid.k2[None,:,None]*tauhat[5] + 1j*grid.k3[None,None,:]*tauhat[2]) + 1j*grid.k3[None,None,:]*tau_projection
-    return w0_u,w0_v,w0_w
 
 
 
