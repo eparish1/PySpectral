@@ -814,13 +814,14 @@ class utilitiesClass():
 
     ## Compute SGS tensor. 
     # tau_ij = [d/dx 
-    tauhat = np.zeros((6,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
-    tauhat[0] = NL[0] #+ NL_f[0]
-    tauhat[1] = NL[1] #+ NL_f[1]
-    tauhat[2] = NL[2] #+ NL_f[2]
-    tauhat[3] = NL[3] #+ NL_f[3]
-    tauhat[4] = NL[4] #+ NL_f[4]
-    tauhat[5] = NL[5] #+ NL_f[5]
+    tauhat = NL
+    #tauhat = np.zeros((6,grid.Npx,grid.N2,(grid.N3/2+1)),dtype='complex')
+    #tauhat[0] = NL[0] #+ NL_f[0]
+    #tauhat[1] = NL[1] #+ NL_f[1]
+    #tauhat[2] = NL[2] #+ NL_f[2]
+    #tauhat[3] = NL[3] #+ NL_f[3]
+    #tauhat[4] = NL[4] #+ NL_f[4]
+    #tauhat[5] = NL[5] #+ NL_f[5]
 
     ## contribution of projection to RHS sgs (k_m k_j)/k^2 \tau_{jm}
     tau_projection  = 1j*grid.ksqr_i*( grid.k1[:,None,None]*grid.k1[:,None,None]*tauhat[0] + grid.k2[None,:,None]*grid.k2[None,:,None]*tauhat[1] + \
